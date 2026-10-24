@@ -4,6 +4,7 @@ go 1.27.0
 
 require (
 	github.com/stretchr/testify v1.12.1
+	go.mau.fi/mautrix-gmessages v0.2610.1-0.20261023204119-6026696bf7cd
 	google.golang.org/protobuf v1.36.12
 )
 
@@ -75,7 +76,7 @@ require (
 	go.lsp.dev/pkg v0.0.0-20210717090340-384b27a52fb2 // indirect
 	go.lsp.dev/protocol v0.12.0 // indirect
 	go.lsp.dev/uri v0.3.0 // indirect
-	go.mau.fi/mautrix-gmessages v0.2610.1-0.20261023204119-6026696bf7cd // indirect
+	go.mau.fi/util v0.11.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0 // indirect
 	go.opentelemetry.io/otel v1.47.0 // indirect

@@ -2505,8 +2505,10 @@ type Media struct {
 	Width           int64                  `protobuf:"varint,8,opt,name=width,proto3" json:"width,omitempty"`
 	Height          int64                  `protobuf:"varint,9,opt,name=height,proto3" json:"height,omitempty"`
 	ActionMessageId string                 `protobuf:"bytes,10,opt,name=action_message_id,json=actionMessageId,proto3" json:"action_message_id,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Bytes the phone embedded in the message itself (no media_id to download); empty otherwise.
+	Data          []byte `protobuf:"bytes,11,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Media) Reset() {
@@ -2607,6 +2609,13 @@ func (x *Media) GetActionMessageId() string {
 		return x.ActionMessageId
 	}
 	return ""
+}
+
+func (x *Media) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
 }
 
 type Message struct {
@@ -3769,7 +3778,7 @@ const file_ertext_v1_ertext_proto_rawDesc = "" +
 	"\x10group_avatar_url\x18\x11 \x01(\tR\x0egroupAvatarUrl\"I\n" +
 	"\bReaction\x12\x14\n" +
 	"\x05emoji\x18\x01 \x01(\tR\x05emoji\x12'\n" +
-	"\x0fparticipant_ids\x18\x02 \x03(\tR\x0eparticipantIds\"\x8d\x02\n" +
+	"\x0fparticipant_ids\x18\x02 \x03(\tR\x0eparticipantIds\"\xa1\x02\n" +
 	"\x05Media\x12\x19\n" +
 	"\bmedia_id\x18\x01 \x01(\tR\amediaId\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\fR\x03key\x12$\n" +
@@ -3781,7 +3790,8 @@ const file_ertext_v1_ertext_proto_rawDesc = "" +
 	"\x05width\x18\b \x01(\x03R\x05width\x12\x16\n" +
 	"\x06height\x18\t \x01(\x03R\x06height\x12*\n" +
 	"\x11action_message_id\x18\n" +
-	" \x01(\tR\x0factionMessageId\"\xef\x03\n" +
+	" \x01(\tR\x0factionMessageId\x12\x12\n" +
+	"\x04data\x18\v \x01(\fR\x04data\"\xef\x03\n" +
 	"\aMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
 	"\x06tmp_id\x18\x02 \x01(\tR\x05tmpId\x12'\n" +

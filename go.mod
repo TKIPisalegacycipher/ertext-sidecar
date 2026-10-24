@@ -3,6 +3,7 @@ module github.com/TKIPisalegacycipher/ertext-sidecar
 go 1.27.0
 
 require (
+	github.com/google/uuid v1.6.0
 	github.com/rs/zerolog v1.35.1
 	github.com/stretchr/testify v1.12.1
 	go.mau.fi/mautrix-gmessages v0.2610.1-0.20261023204119-6026696bf7cd
@@ -49,7 +50,6 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gofrs/flock v0.13.1 // indirect
 	github.com/google/go-containerregistry v0.22.1 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jdx/go-netrc v1.0.0 // indirect
 	github.com/klauspost/compress v1.20.3 // indirect

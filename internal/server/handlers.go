@@ -2,8 +2,10 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"time"
 
 	"go.mau.fi/mautrix-gmessages/pkg/libgm/events"
@@ -178,14 +180,142 @@ func (s *Server) unpair() *pb.Response {
 	return ackOr(err)
 }
 
-func (s *Server) listConversations(*pb.ListConversations) *pb.Response {
-	return errResp(errNotImplemented)
+func badRequest(format string, args ...any) error {
+	return fmt.Errorf("%w: %s", translate.ErrBadRequest, fmt.Sprintf(format, args...))
 }
-func (s *Server) fetchMessages(*pb.FetchMessages) *pb.Response { return errResp(errNotImplemented) }
-func (s *Server) sendMessage(*pb.SendMessage) *pb.Response     { return errResp(errNotImplemented) }
-func (s *Server) sendReaction(*pb.SendReaction) *pb.Response   { return errResp(errNotImplemented) }
-func (s *Server) markRead(*pb.MarkRead) *pb.Response           { return errResp(errNotImplemented) }
-func (s *Server) downloadMedia(*pb.DownloadMedia) *pb.Response { return errResp(errNotImplemented) }
-func (s *Server) getThumbnails(*pb.GetThumbnails) *pb.Response { return errResp(errNotImplemented) }
 
-var errNotImplemented = errors.New("not implemented")
+func (s *Server) listConversations(r *pb.ListConversations) *pb.Response {
+	count := int64(r.GetCount())
+	if count <= 0 {
+		count = 100
+	}
+	return s.withClient(requestTimeout, func(ctx context.Context, c gm.Client) *pb.Response {
+		resp, err := c.ListConversations(ctx, &gmproto.ListConversationsRequest{
+			Count: count, Folder: translate.Folder(r.GetFolder()), Cursor: translate.GMCursor(r.GetCursor()),
+		})
+		if err != nil {
+			return errResp(err)
+		}
+		return &pb.Response{Result: &pb.Response_ConversationPage{ConversationPage: translate.ConversationPage(resp)}}
+	})
+}
+
+func (s *Server) fetchMessages(r *pb.FetchMessages) *pb.Response {
+	if r.GetConversationId() == "" {
+		return errResp(badRequest("conversation_id required"))
+	}
+	count := int64(r.GetCount())
+	if count <= 0 {
+		count = 25
+	}
+	cur := translate.GMCursor(r.GetCursor())
+	return s.withClient(requestTimeout, func(ctx context.Context, c gm.Client) *pb.Response {
+		resp, err := c.FetchMessages(ctx, r.GetConversationId(), count, cur)
+		if err != nil {
+			return errResp(err)
+		}
+		return &pb.Response{Result: &pb.Response_MessagePage{MessagePage: translate.MessagePage(resp, cur)}}
+	})
+}
+
+func (s *Server) sendMessage(r *pb.SendMessage) *pb.Response {
+	gmReq, err := translate.SendMessageRequest(r)
+	if err != nil {
+		return errResp(err)
+	}
+	return s.withClient(requestTimeout, func(ctx context.Context, c gm.Client) *pb.Response {
+		resp, err := c.SendMessage(ctx, gmReq)
+		if err != nil {
+			return errResp(err)
+		}
+		if resp.GetStatus() != gmproto.SendMessageResponse_SUCCESS {
+			return errResp(fmt.Errorf("%w: %s", errSendFailed, resp.GetStatus()))
+		}
+		return ack()
+	})
+}
+
+func (s *Server) sendReaction(r *pb.SendReaction) *pb.Response {
+	gmReq, err := translate.SendReactionRequest(r)
+	if err != nil {
+		return errResp(err)
+	}
+	return s.withClient(requestTimeout, func(ctx context.Context, c gm.Client) *pb.Response {
+		resp, err := c.SendReaction(ctx, gmReq)
+		if err != nil {
+			return errResp(err)
+		}
+		if !resp.GetSuccess() {
+			return errResp(fmt.Errorf("%w: reaction rejected", errSendFailed))
+		}
+		return ack()
+	})
+}
+
+func (s *Server) markRead(r *pb.MarkRead) *pb.Response {
+	if r.GetConversationId() == "" || r.GetMessageId() == "" {
+		return errResp(badRequest("conversation_id and message_id required"))
+	}
+	return s.withClient(requestTimeout, func(ctx context.Context, c gm.Client) *pb.Response {
+		return ackOr(c.MarkRead(ctx, r.GetConversationId(), r.GetMessageId()))
+	})
+}
+
+func (s *Server) getThumbnails(r *pb.GetThumbnails) *pb.Response {
+	if len(r.GetParticipantIds()) == 0 {
+		return errResp(badRequest("participant_ids required"))
+	}
+	return s.withClient(requestTimeout, func(ctx context.Context, c gm.Client) *pb.Response {
+		resp, err := c.GetParticipantThumbnail(ctx, r.GetParticipantIds()...)
+		if err != nil {
+			return errResp(err)
+		}
+		out := &pb.Thumbnails{}
+		for _, th := range resp.GetThumbnail() {
+			out.Thumbnails = append(out.Thumbnails, &pb.Thumbnail{
+				ParticipantId: th.GetIdentifier(), Image: th.GetData().GetImageBuffer(),
+			})
+		}
+		return &pb.Response{Result: &pb.Response_Thumbnails{Thumbnails: out}}
+	})
+}
+
+func (s *Server) downloadMedia(r *pb.DownloadMedia) *pb.Response {
+	dest := r.GetDestPath()
+	if r.GetMediaId() == "" || !filepath.IsAbs(dest) {
+		return errResp(badRequest("media_id and an absolute dest_path required"))
+	}
+	return s.withClient(downloadTimeout, func(ctx context.Context, c gm.Client) *pb.Response {
+		return ackOr(download(ctx, c, r.GetMediaId(), r.GetKey(), dest))
+	})
+}
+
+// download decrypts via libgm into dest+".part", then renames over dest.
+func download(ctx context.Context, c gm.Client, mediaID string, key []byte, dest string) (err error) {
+	rc, err := c.DownloadMedia(ctx, mediaID, key)
+	if err != nil {
+		return err
+	}
+	defer rc.Close()
+	if err := os.MkdirAll(filepath.Dir(dest), 0o700); err != nil {
+		return err
+	}
+	part := dest + ".part"
+	f, err := os.Create(part)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = os.Remove(part)
+		}
+	}()
+	if _, err = io.Copy(f, rc); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if err = f.Close(); err != nil {
+		return err
+	}
+	return os.Rename(part, dest)
+}

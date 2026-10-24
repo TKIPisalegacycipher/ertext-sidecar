@@ -285,3 +285,65 @@ func (f *fakeClient) sessionArg() []byte {
 }
 
 type gmClient = gm.Client
+
+// Locked accessors/setters for the data-request fields.
+func (f *fakeClient) setList(r *gmproto.ListConversationsResponse) {
+	f.mu.Lock()
+	f.listResp = r
+	f.mu.Unlock()
+}
+func (f *fakeClient) setFetch(r *gmproto.ListMessagesResponse) {
+	f.mu.Lock()
+	f.fetchResp = r
+	f.mu.Unlock()
+}
+func (f *fakeClient) setSend(r *gmproto.SendMessageResponse) {
+	f.mu.Lock()
+	f.sendResp = r
+	f.mu.Unlock()
+}
+func (f *fakeClient) setReact(r *gmproto.SendReactionResponse) {
+	f.mu.Lock()
+	f.reactResp = r
+	f.mu.Unlock()
+}
+func (f *fakeClient) setMedia(b []byte) {
+	f.mu.Lock()
+	f.media = b
+	f.mu.Unlock()
+}
+func (f *fakeClient) setThumbs(r *gmproto.GetThumbnailResponse) {
+	f.mu.Lock()
+	f.thumbs = r
+	f.mu.Unlock()
+}
+func (f *fakeClient) gotList() *gmproto.ListConversationsRequest {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.listReq
+}
+func (f *fakeClient) gotFetch() []any {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]any(nil), f.fetchArgs...)
+}
+func (f *fakeClient) gotSend() *gmproto.SendMessageRequest {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.sendReq
+}
+func (f *fakeClient) gotReact() *gmproto.SendReactionRequest {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.reactReq
+}
+func (f *fakeClient) gotRead() [2]string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.readArgs
+}
+func (f *fakeClient) gotThumbIDs() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]string(nil), f.thumbIDs...)
+}

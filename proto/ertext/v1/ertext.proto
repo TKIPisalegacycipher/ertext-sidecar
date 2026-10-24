@@ -255,6 +255,8 @@ message Media {
   int64 width = 8;
   int64 height = 9;
   string action_message_id = 10;
+  // Bytes the phone embedded in the message itself (no media_id to download); empty otherwise.
+  bytes data = 11;
 }
 
 message Message {

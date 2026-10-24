@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"go.mau.fi/mautrix-gmessages/pkg/libgm"
 	"go.mau.fi/mautrix-gmessages/pkg/libgm/events"
 	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
 
@@ -121,6 +122,9 @@ func (s *Server) handlerFor(c gm.Client) func(evt any) {
 			}
 			s.emit(&pb.Event{Body: &pb.Event_SessionUpdated{SessionUpdated: &pb.SessionUpdated{SessionBlob: blob}}})
 			return
+		}
+		if wm, ok := evt.(*libgm.WrappedMessage); ok && wm != nil && wm.Message != nil {
+			s.logMedia(wm.Message)
 		}
 		for _, e := range translate.Event(evt) {
 			s.emit(e)
@@ -299,8 +303,28 @@ func (s *Server) fetchMessages(r *pb.FetchMessages) *pb.Response {
 		if err != nil {
 			return errResp(err)
 		}
+		s.logMedia(resp.GetMessages()...)
 		return &pb.Response{Result: &pb.Response_MessagePage{MessagePage: translate.MessagePage(resp, cur)}}
 	})
+}
+
+// logMedia writes a debug line for each message that carries media or a location: how many
+// MessageInfo entries of each type, how many media have no media_id, and the embedded byte count.
+// Counts only, never content.
+func (s *Server) logMedia(msgs ...*gmproto.Message) {
+	if !s.log.Debug().Enabled() {
+		return
+	}
+	for _, m := range msgs {
+		st := translate.MediaStats(m)
+		if st.Media+st.Location == 0 {
+			continue
+		}
+		s.log.Debug().Str("message_id", m.GetMessageID()).
+			Int("text", st.Text).Int("media", st.Media).Int("location", st.Location).Int("other", st.Other).
+			Int("empty_media_id", st.EmptyMediaID).Int("embedded_bytes", st.EmbeddedBytes).
+			Msg("message media")
+	}
 }
 
 func (s *Server) sendMessage(r *pb.SendMessage) *pb.Response {

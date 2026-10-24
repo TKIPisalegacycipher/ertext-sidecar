@@ -33,6 +33,13 @@ func Message(m *gmproto.Message) *pb.Message {
 			}
 		case *gmproto.MessageInfo_MediaContent:
 			out.Media = append(out.Media, media(d.MediaContent, info.GetActionMessageID()))
+		case *gmproto.MessageInfo_LocationContent:
+			if t := d.LocationContent.GetMessageContent().GetContent(); t != "" {
+				texts = append(texts, t)
+			}
+			if c := d.LocationContent.GetMediaContent(); c != nil {
+				out.Media = append(out.Media, media(c, info.GetActionMessageID()))
+			}
 		}
 	}
 	out.Text = strings.Join(texts, "\n")
@@ -57,6 +64,7 @@ func media(c *gmproto.MediaContent, actionID string) *pb.Media {
 		Width:           c.GetDimensions().GetWidth(),
 		Height:          c.GetDimensions().GetHeight(),
 		ActionMessageId: actionID,
+		Data:            c.GetMediaData(),
 	}
 }
 

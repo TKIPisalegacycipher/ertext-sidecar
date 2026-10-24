@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"runtime/debug"
 
 	"github.com/rs/zerolog"
@@ -14,6 +15,7 @@ import (
 
 	"go.mau.fi/mautrix-gmessages/pkg/libgm"
 	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
+	"go.mau.fi/mautrix-gmessages/pkg/libgm/util"
 )
 
 const libgmModule = "go.mau.fi/mautrix-gmessages"
@@ -49,6 +51,13 @@ type Factory func(session []byte) (Client, error)
 
 type libgmClient struct {
 	*libgm.Client
+	dl *http.Client // media downloads
+}
+
+// DownloadMedia shadows libgm's so a non-2xx response is reported as one (see fetchMedia). libgm
+// builds its own HTTP client from the same settings, with no cookies or other state.
+func (c *libgmClient) DownloadMedia(ctx context.Context, mediaID string, key []byte) (io.ReadCloser, error) {
+	return fetchMedia(ctx, c.dl, util.UploadMediaURL, c.AuthData, mediaID, key)
 }
 
 func (c *libgmClient) SetPairCallback(fn func(*gmproto.PairedData)) { c.PairCallback.Store(&fn) }
@@ -87,7 +96,10 @@ func NewFactory(log zerolog.Logger) Factory {
 				return nil, fmt.Errorf("decode session: %w", err)
 			}
 		}
-		return &libgmClient{Client: libgm.NewClient(ad, nil, libLog, exhttp.SensibleClientSettings)}, nil
+		return &libgmClient{
+			Client: libgm.NewClient(ad, nil, libLog, exhttp.SensibleClientSettings),
+			dl:     exhttp.SensibleClientSettings.Compile(),
+		}, nil
 	}
 }
 

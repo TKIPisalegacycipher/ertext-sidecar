@@ -23,6 +23,8 @@ func (s *Server) handle(req *pb.Request) *pb.Response {
 		return &pb.Response{Result: &pb.Response_Pong{Pong: &pb.Pong{}}}
 	case *pb.Request_StartPairing:
 		return s.startPairing()
+	case *pb.Request_StartGoogleLogin:
+		return s.startGoogleLogin(b.StartGoogleLogin)
 	case *pb.Request_RefreshPairing:
 		return s.refreshPairing()
 	case *pb.Request_Connect:
@@ -154,6 +156,63 @@ func (s *Server) startPairing() *pb.Response {
 		return errResp(fmt.Errorf("pairing superseded by a later Connect/StartPairing"))
 	}
 	s.emit(pairQr(url))
+	return ack()
+}
+
+// googleLoginTimeout bounds the whole Google-account pairing, including the wait for the user to
+// tap the emoji on the phone.
+const googleLoginTimeout = 5 * time.Minute
+
+// startGoogleLogin runs Google-account ("gaia") pairing and replies only once it has finished.
+// Like pairDone, on success it takes the session, drops the pairing client, waits PairSettle and
+// emits PairSuccess (Rust then Connects); the Ack follows. Cookies, the emoji and the session are
+// never logged.
+func (s *Server) startGoogleLogin(r *pb.StartGoogleLogin) *pb.Response {
+	if len(r.GetCookies()) == 0 {
+		return errResp(badRequest("cookies required"))
+	}
+	c, err := s.newClient(nil)
+	if err != nil {
+		return errResp(err)
+	}
+	c.SetCookies(r.GetCookies())
+	c.SetEventHandler(func(evt any) { s.log.Debug().Type("event", evt).Msg("ignoring pre-pairing event") })
+	s.replace(c)
+	ctx, cancel := context.WithTimeout(s.ctx, googleLoginTimeout)
+	defer cancel()
+	fail := func(err error) *pb.Response {
+		superseded := s.current() != c
+		s.abandon(c) // pairing may have started a long poll before failing
+		if superseded {
+			return errResp(fmt.Errorf("google login %w", errSuperseded))
+		}
+		return errResp(signInRejected(err))
+	}
+	if err := c.FetchConfig(ctx); err != nil {
+		return fail(err)
+	}
+	err = c.DoGaiaPairing(ctx, func(emoji string) {
+		if s.current() == c {
+			s.emit(&pb.Event{Body: &pb.Event_PairEmoji{PairEmoji: &pb.PairEmoji{Emoji: emoji}}})
+		}
+	})
+	if err != nil {
+		return fail(err)
+	}
+	blob, err := c.SessionBlob()
+	c.Disconnect()
+	if !s.dropIf(c) {
+		return errResp(fmt.Errorf("google login %w", errSuperseded))
+	}
+	if err != nil {
+		return errResp(fmt.Errorf("pairing succeeded but session could not be saved: %w", err))
+	}
+	select {
+	case <-time.After(s.PairSettle):
+	case <-s.ctx.Done():
+		return errResp(s.ctx.Err())
+	}
+	s.emit(&pb.Event{Body: &pb.Event_PairSuccess{PairSuccess: &pb.PairSuccess{SessionBlob: blob}}})
 	return ack()
 }
 

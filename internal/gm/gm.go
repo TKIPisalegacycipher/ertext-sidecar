@@ -23,6 +23,11 @@ type Client interface {
 	SetPairCallback(func(*gmproto.PairedData))
 	SessionBlob() ([]byte, error)
 	FetchConfig(ctx context.Context) error
+	// SetCookies sets the Google account cookies used by Google-account pairing.
+	SetCookies(map[string]string)
+	// DoGaiaPairing runs Google-account pairing, reporting the emoji to tap on the phone, and
+	// returns once the phone has confirmed or rejected it.
+	DoGaiaPairing(ctx context.Context, emojiCallback func(string)) error
 	StartLogin(ctx context.Context) (string, error)
 	RefreshPhoneRelay() (string, error)
 	Connect(ctx context.Context) error
@@ -47,6 +52,23 @@ type libgmClient struct {
 }
 
 func (c *libgmClient) SetPairCallback(fn func(*gmproto.PairedData)) { c.PairCallback.Store(&fn) }
+
+func (c *libgmClient) SetCookies(cookies map[string]string) { c.AuthData.SetCookies(cookies) }
+
+// DoGaiaPairing is libgm's DoGaiaPairing minus its tail, which fires PairSuccessful and starts a
+// background Reconnect on context.TODO(). The server disconnects the pairing client and Rust
+// reconnects from the session blob (as mautrix-gmessages' finishLogin does), so that Reconnect
+// would only race the Disconnect and could leave a long poll running. The long poll that pairing
+// needs lives on ctx, like the bridge's bgCtx.
+func (c *libgmClient) DoGaiaPairing(ctx context.Context, emojiCallback func(string)) error {
+	emoji, ps, err := c.StartGaiaPairing(ctx, ctx)
+	if err != nil {
+		return err
+	}
+	emojiCallback(emoji)
+	_, err = c.FinishGaiaPairing(ctx, ps)
+	return err
+}
 
 func (c *libgmClient) SessionBlob() ([]byte, error) { return json.Marshal(c.AuthData) }
 

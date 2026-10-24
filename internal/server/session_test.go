@@ -14,6 +14,8 @@ import (
 func req(id uint64, body any) *pb.Request {
 	r := &pb.Request{Id: id}
 	switch b := body.(type) {
+	case *pb.StartGoogleLogin:
+		r.Body = &pb.Request_StartGoogleLogin{StartGoogleLogin: b}
 	case *pb.StartPairing:
 		r.Body = &pb.Request_StartPairing{StartPairing: b}
 	case *pb.RefreshPairing:

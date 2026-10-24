@@ -32,6 +32,10 @@ type fakeClient struct {
 	refreshQR string
 	err       map[string]error
 
+	cookies   map[string]string
+	gaiaEmoji []string      // DoGaiaPairing reports each of these to its callback
+	gaiaGate  chan struct{} // if set, DoGaiaPairing blocks (after the emoji) until closed
+
 	connectGate chan struct{}   // if set, Connect blocks until it is closed
 	unpairGate  chan struct{}   // if set, Unpair blocks until it is closed
 	panicOn     map[string]bool // record(name) panics for these calls
@@ -106,6 +110,34 @@ func (f *fakeClient) SessionBlob() ([]byte, error) {
 	return b, f.record("blob")
 }
 func (f *fakeClient) FetchConfig(context.Context) error { return f.record("config") }
+func (f *fakeClient) SetCookies(c map[string]string) {
+	f.mu.Lock()
+	f.cookies = c
+	f.mu.Unlock()
+	_ = f.record("cookies")
+}
+func (f *fakeClient) DoGaiaPairing(ctx context.Context, emoji func(string)) error {
+	err := f.record("gaia")
+	f.mu.Lock()
+	em, gate := f.gaiaEmoji, f.gaiaGate
+	f.mu.Unlock()
+	for _, e := range em {
+		emoji(e)
+	}
+	if gate != nil {
+		select {
+		case <-gate:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return err
+}
+func (f *fakeClient) gotCookies() map[string]string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.cookies
+}
 func (f *fakeClient) StartLogin(context.Context) (string, error) {
 	f.mu.Lock()
 	q := f.qr

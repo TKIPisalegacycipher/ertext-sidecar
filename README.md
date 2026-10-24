@@ -26,3 +26,12 @@ Frames: a u32 little-endian length, then a protobuf `ertext.v1.Envelope`, with a
 The sidecar first writes `Event{hello}`, then answers every `Request` with exactly one `Response`
 carrying the same `id`, in any order, and sends `Event`s at any time. Logs go to stderr.
 Golden frames for cross-language tests are in `proto/testdata/`.
+
+## Pairing
+
+Google has discontinued QR-code pairing, so `StartPairing`/`RefreshPairing` no longer work in
+practice. Pair with a Google account instead: send `StartGoogleLogin` with the cookies of a
+signed-in messages.google.com session. The sidecar emits `PairEmoji` for the user to tap on the
+phone, then `PairSuccess` with the session blob, and replies Ack only when pairing has finished
+(or an `RpcError` such as `PAIRING_REJECTED`, `NO_PHONE`, `NOT_SIGNED_IN` or `TIMEOUT`). After
+that, `Connect` with the blob as before.

@@ -27,6 +27,7 @@ func TestStatus(t *testing.T) {
 		gmproto.MessageStatusType_INCOMING_AUTO_DOWNLOADING:       pb.MessageStatus_MESSAGE_STATUS_INCOMING_DOWNLOADING,
 		gmproto.MessageStatusType_INCOMING_YET_TO_MANUAL_DOWNLOAD: pb.MessageStatus_MESSAGE_STATUS_INCOMING_DOWNLOADING,
 		gmproto.MessageStatusType_INCOMING_DELETED:                pb.MessageStatus_MESSAGE_STATUS_DELETED,
+		gmproto.MessageStatusType_MESSAGE_DELETED:                 pb.MessageStatus_MESSAGE_STATUS_DELETED,
 		gmproto.MessageStatusType_TOMBSTONE_PARTICIPANT_JOINED:    pb.MessageStatus_MESSAGE_STATUS_INCOMING,
 		gmproto.MessageStatusType_STATUS_UNKNOWN:                  pb.MessageStatus_MESSAGE_STATUS_UNSPECIFIED,
 	}
@@ -34,5 +35,6 @@ func TestStatus(t *testing.T) {
 		require.Equal(t, want, translate.Status(in), in.String())
 	}
 	require.True(t, translate.IsDeleted(gmproto.MessageStatusType_INCOMING_DELETED))
+	require.True(t, translate.IsDeleted(gmproto.MessageStatusType_MESSAGE_DELETED))
 	require.False(t, translate.IsDeleted(gmproto.MessageStatusType_INCOMING_COMPLETE))
 }

@@ -50,9 +50,13 @@ func (c *libgmClient) SetPairCallback(fn func(*gmproto.PairedData)) { c.PairCall
 
 func (c *libgmClient) SessionBlob() ([]byte, error) { return json.Marshal(c.AuthData) }
 
-// NewFactory caps libgm's logger at Info: its Debug/Trace output includes message content.
+// libgmLevel caps libgm's logger at Error: its Debug/Trace output includes message content, and
+// it logs base64 decrypted payloads at Warn (event_handler.go, "Got unknown event type").
+func libgmLevel(parent zerolog.Level) zerolog.Level { return max(parent, zerolog.ErrorLevel) }
+
+// NewFactory builds libgm clients whose logger is capped by libgmLevel.
 func NewFactory(log zerolog.Logger) Factory {
-	libLog := log.With().Str("component", "libgm").Logger().Level(max(log.GetLevel(), zerolog.InfoLevel))
+	libLog := log.With().Str("component", "libgm").Logger().Level(libgmLevel(log.GetLevel()))
 	return func(session []byte) (Client, error) {
 		ad := libgm.NewAuthData()
 		if session != nil {

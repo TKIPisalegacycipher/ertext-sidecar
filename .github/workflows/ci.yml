@@ -5,11 +5,18 @@ on:
 jobs:
   test:
     runs-on: windows-latest
+    env:
+      CGO_ENABLED: "1" # -race needs cgo
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - name: gofmt
+        shell: bash
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then echo "$unformatted"; exit 1; fi
       - run: go vet ./...
       - run: go test -race ./...
       - run: go tool buf lint

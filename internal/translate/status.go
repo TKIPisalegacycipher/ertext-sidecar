@@ -36,8 +36,14 @@ var downloading = map[gmproto.MessageStatusType]bool{
 }
 
 // IsDeleted reports libgm's "this message was deleted" statuses (sent as MessageDeleted).
+// MESSAGE_DELETED (300) is the one mautrix-gmessages treats as a remove.
 func IsDeleted(s gmproto.MessageStatusType) bool {
-	return s == gmproto.MessageStatusType_OUTGOING_DELETED || s == gmproto.MessageStatusType_INCOMING_DELETED
+	switch s {
+	case gmproto.MessageStatusType_OUTGOING_DELETED, gmproto.MessageStatusType_INCOMING_DELETED,
+		gmproto.MessageStatusType_MESSAGE_DELETED:
+		return true
+	}
+	return false
 }
 
 func isOutgoing(s gmproto.MessageStatusType) bool {

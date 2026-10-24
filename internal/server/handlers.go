@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"time"
 
 	"go.mau.fi/mautrix-gmessages/pkg/libgm/events"
@@ -70,7 +71,7 @@ func (s *Server) connect(r *pb.Connect) *pb.Response {
 		s.log.Warn().Err(err).Msg("fetch config failed; connecting anyway") // as mautrix-gmessages does
 	}
 	if err := c.Connect(s.ctx); err != nil { // long polling lives on the server context
-		s.dropIf(c)
+		s.abandon(c)
 		return errResp(err)
 	}
 	if s.current() != c { // a later Connect/StartPairing replaced c while it was connecting
@@ -80,11 +81,34 @@ func (s *Server) connect(r *pb.Connect) *pb.Response {
 	return ack()
 }
 
+// abandon drops c after a failed start. libgm may already be long polling (StartLogin starts the
+// poll before it can fail), so c is disconnected whether or not it is still current. Disconnect is
+// idempotent, so disconnecting a client a later request already replaced is harmless.
+func (s *Server) abandon(c gm.Client) {
+	s.dropIf(c)
+	c.Disconnect()
+}
+
 // handlerFor forwards c's libgm events while c is the current client. AuthTokenRefreshed becomes
-// SessionUpdated, so Rust always holds the latest blob.
+// SessionUpdated, so Rust always holds the latest blob. Like mautrix-gmessages, MESSAGE_DELETED is
+// ignored while the phone's database syncs (the flag is per client); when the sync completes,
+// translate emits ResyncNeeded. A panic is logged (value type only) and the event dropped.
 func (s *Server) handlerFor(c gm.Client) func(evt any) {
+	var dbSyncing atomic.Bool
 	return func(evt any) {
+		defer func() {
+			if p := recover(); p != nil {
+				s.log.Error().Str("panic_type", fmt.Sprintf("%T", p)).Str("event", fmt.Sprintf("%T", evt)).
+					Msg("event handler panicked; event dropped")
+			}
+		}()
 		if s.current() != c {
+			return
+		}
+		if syncing, ok := translate.MobileDBSync(evt); ok {
+			dbSyncing.Store(syncing)
+		} else if dbSyncing.Load() && translate.SuppressedDuringDBSync(evt) {
+			s.log.Debug().Msg("ignoring MESSAGE_DELETED during mobile database sync")
 			return
 		}
 		if _, ok := evt.(*events.AuthTokenRefreshed); ok {
@@ -117,12 +141,12 @@ func (s *Server) startPairing() *pb.Response {
 	ctx, cancel := context.WithTimeout(s.ctx, requestTimeout)
 	defer cancel()
 	if err := c.FetchConfig(ctx); err != nil {
-		s.dropIf(c)
+		s.abandon(c)
 		return errResp(err)
 	}
 	url, err := c.StartLogin(s.ctx) // its long poll lives on the server context
 	if err != nil {
-		s.dropIf(c)
+		s.abandon(c) // StartLogin may have started the long poll before failing
 		return errResp(err)
 	}
 	if s.current() != c { // a later Connect/StartPairing replaced c while it was starting
@@ -176,7 +200,9 @@ func (s *Server) unpair() *pb.Response {
 	ctx, cancel := context.WithTimeout(s.ctx, requestTimeout)
 	defer cancel()
 	err := c.Unpair(ctx)
-	s.replace(nil)
+	if s.dropIf(c) { // a Connect/StartPairing during Unpair keeps its newer client
+		c.Disconnect()
+	}
 	return ackOr(err)
 }
 

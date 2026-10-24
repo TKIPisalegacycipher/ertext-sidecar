@@ -43,18 +43,24 @@ type Server struct {
 
 	mu  sync.Mutex
 	cli gm.Client
+
+	handlerMu sync.Mutex // guards stopping and handlers.Add, so no handler starts after Wait
+	stopping  bool
+	handlers  sync.WaitGroup
 }
 
 func New(f gm.Factory, log zerolog.Logger, sidecarVersion, libgmVersion string) *Server {
 	return &Server{newClient: f, log: log, sidecarVersion: sidecarVersion, libgmVersion: libgmVersion, PairSettle: 2 * time.Second}
 }
 
-// Run serves until r reaches EOF (nil), a frame can't be decoded, or w fails (error).
+// Run serves until r reaches EOF (nil), ctx is canceled (nil), a frame can't be decoded, or w
+// fails (error).
 //
-// Shutdown order on EOF or a bad frame: cancel the work context (aborts in-flight libgm calls),
-// wait for handlers, disconnect libgm, then close the output queue so the writer drains every
-// queued Response/Event before Run returns. On a write failure Run returns at once; the reader
-// goroutine may stay blocked on r, which is fine because the process is about to exit.
+// Shutdown order on EOF, ctx cancel or a bad frame: cancel the work context (aborts in-flight
+// libgm calls), stop starting handlers and wait for running ones, disconnect libgm, then close the
+// output queue so the writer drains every queued Response/Event before Run returns. On a write
+// failure Run returns at once. After ctx cancel or a write failure the reader goroutine may stay
+// blocked on r, which is fine because the process is about to exit.
 func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -73,18 +79,12 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 		ProtocolVersion: ProtocolVersion, SidecarVersion: s.sidecarVersion, LibgmVersion: s.libgmVersion,
 	}}})
 
-	var handlers sync.WaitGroup
 	readDone := make(chan error, 1)
-	go func() { readDone <- s.readLoop(r, &handlers) }()
+	go func() { readDone <- s.readLoop(r) }()
 
-	select {
-	case err := <-writeErr:
+	shutdown := func(readErr error) error {
 		cancel()
-		s.replace(nil)
-		return err
-	case readErr := <-readDone:
-		cancel()
-		handlers.Wait()
+		s.stopHandlers()
 		s.replace(nil) // disconnect libgm before exiting
 		s.closeOut()
 		if err := <-writeErr; err != nil {
@@ -92,9 +92,38 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 		}
 		return readErr
 	}
+	select {
+	case err := <-writeErr:
+		cancel()
+		s.replace(nil)
+		return err
+	case readErr := <-readDone:
+		return shutdown(readErr)
+	case <-ctx.Done(): // parent canceled (signal): shut down without waiting for the reader
+		return shutdown(nil)
+	}
 }
 
-func (s *Server) readLoop(r io.Reader, handlers *sync.WaitGroup) error {
+// startHandler registers a request handler, or reports false once shutdown has begun.
+func (s *Server) startHandler() bool {
+	s.handlerMu.Lock()
+	defer s.handlerMu.Unlock()
+	if s.stopping {
+		return false
+	}
+	s.handlers.Add(1)
+	return true
+}
+
+// stopHandlers refuses new handlers and waits for the running ones.
+func (s *Server) stopHandlers() {
+	s.handlerMu.Lock()
+	s.stopping = true
+	s.handlerMu.Unlock()
+	s.handlers.Wait()
+}
+
+func (s *Server) readLoop(r io.Reader) error {
 	for {
 		buf, err := frame.Read(r)
 		if errors.Is(err, io.EOF) {
@@ -111,14 +140,29 @@ func (s *Server) readLoop(r io.Reader, handlers *sync.WaitGroup) error {
 			s.log.Warn().Msg("ignoring non-request frame")
 			continue
 		}
-		handlers.Add(1)
+		if !s.startHandler() {
+			return nil // shutting down
+		}
 		go func() {
-			defer handlers.Done()
-			res := s.handle(req)
+			defer s.handlers.Done()
+			res := s.safeHandle(req)
 			res.Id = req.GetId()
 			s.send(&pb.Envelope{Kind: &pb.Envelope_Response{Response: res}})
 		}()
 	}
+}
+
+// safeHandle runs handle, turning a panic into an INTERNAL error for this request. Only the panic
+// value's type is logged: its contents could include message data.
+func (s *Server) safeHandle(req *pb.Request) (res *pb.Response) {
+	defer func() {
+		if p := recover(); p != nil {
+			s.log.Error().Str("panic_type", fmt.Sprintf("%T", p)).Uint64("request_id", req.GetId()).
+				Str("request", fmt.Sprintf("%T", req.GetBody())).Msg("request handler panicked")
+			res = errResp(errInternal)
+		}
+	}()
+	return s.handle(req)
 }
 
 // writeLoop writes queued envelopes until s.out is closed and drained, or a write fails.

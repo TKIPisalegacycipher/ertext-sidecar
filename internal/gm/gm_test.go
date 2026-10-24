@@ -32,3 +32,11 @@ func TestFactoryRejectsGarbage(t *testing.T) {
 func TestLibgmVersionNonEmpty(t *testing.T) {
 	require.NotEmpty(t, LibgmVersion())
 }
+
+func TestLibgmLevelCappedAtError(t *testing.T) {
+	for _, l := range []zerolog.Level{zerolog.TraceLevel, zerolog.DebugLevel, zerolog.InfoLevel, zerolog.WarnLevel, zerolog.ErrorLevel} {
+		require.Equal(t, zerolog.ErrorLevel, libgmLevel(l), l.String())
+	}
+	require.Equal(t, zerolog.FatalLevel, libgmLevel(zerolog.FatalLevel))
+	require.Equal(t, zerolog.Disabled, libgmLevel(zerolog.Disabled))
+}

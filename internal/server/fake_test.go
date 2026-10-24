@@ -32,7 +32,9 @@ type fakeClient struct {
 	refreshQR string
 	err       map[string]error
 
-	connectGate chan struct{} // if set, Connect blocks until it is closed
+	connectGate chan struct{}   // if set, Connect blocks until it is closed
+	unpairGate  chan struct{}   // if set, Unpair blocks until it is closed
+	panicOn     map[string]bool // record(name) panics for these calls
 
 	listReq   *gmproto.ListConversationsRequest
 	listResp  *gmproto.ListConversationsResponse
@@ -49,7 +51,8 @@ type fakeClient struct {
 }
 
 func newFake() *fakeClient {
-	return &fakeClient{blob: []byte(`{"fake":true}`), qr: "https://qr/1", refreshQR: "https://qr/2", err: map[string]error{}}
+	return &fakeClient{blob: []byte(`{"fake":true}`), qr: "https://qr/1", refreshQR: "https://qr/2",
+		err: map[string]error{}, panicOn: map[string]bool{}}
 }
 
 func (f *fakeClient) factory() gm.Factory {
@@ -66,6 +69,9 @@ func (f *fakeClient) record(name string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.calls = append(f.calls, name)
+	if f.panicOn[name] {
+		panic("fake panic: " + name)
+	}
 	return f.err[name]
 }
 
@@ -122,8 +128,17 @@ func (f *fakeClient) Connect(context.Context) error {
 	}
 	return err
 }
-func (f *fakeClient) Disconnect()                            { _ = f.record("disconnect") }
-func (f *fakeClient) Unpair(context.Context) error           { return f.record("unpair") }
+func (f *fakeClient) Disconnect() { _ = f.record("disconnect") }
+func (f *fakeClient) Unpair(context.Context) error {
+	err := f.record("unpair")
+	f.mu.Lock()
+	gate := f.unpairGate
+	f.mu.Unlock()
+	if gate != nil {
+		<-gate
+	}
+	return err
+}
 func (f *fakeClient) SetActiveSession(context.Context) error { return f.record("setactive") }
 func (f *fakeClient) ListConversations(_ context.Context, r *gmproto.ListConversationsRequest) (*gmproto.ListConversationsResponse, error) {
 	f.mu.Lock()

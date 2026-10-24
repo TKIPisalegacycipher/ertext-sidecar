@@ -3,6 +3,7 @@ package translate_test
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -40,6 +41,7 @@ func TestEventConnectionStates(t *testing.T) {
 		{&gmproto.RevokePairData{}, pb.ConnState_CONN_STATE_UNPAIRED},
 		{&events.GaiaLoggedOut{}, pb.ConnState_CONN_STATE_UNPAIRED},
 		{&events.PingFailed{Error: events.ErrRequestedEntityNotFound, ErrorCount: 1}, pb.ConnState_CONN_STATE_UNPAIRED},
+		{&events.ListenFatalError{Error: httpErr("polling", 401)}, pb.ConnState_CONN_STATE_UNPAIRED},
 	}
 	for _, c := range cases {
 		require.Equal(t, c.want, connState(t, translate.Event(c.in)), "%T", c.in)
@@ -89,4 +91,61 @@ func TestIsCredentialError(t *testing.T) {
 	require.True(t, translate.IsCredentialError(events.ErrRequestedEntityNotFound))
 	require.False(t, translate.IsCredentialError(errors.New("other")))
 	require.False(t, translate.IsCredentialError(nil))
+}
+
+func httpErr(action string, code int) error {
+	return events.HTTPError{Action: action, Resp: &http.Response{StatusCode: code}}
+}
+
+func TestIsCredentialErrorPolling401(t *testing.T) {
+	require.True(t, translate.IsCredentialError(httpErr("polling", http.StatusUnauthorized)))
+	require.True(t, translate.IsCredentialError(fmt.Errorf("wrap: %w", httpErr("polling", http.StatusUnauthorized))))
+	require.False(t, translate.IsCredentialError(httpErr("polling", http.StatusInternalServerError)))
+	require.False(t, translate.IsCredentialError(httpErr("downloading avatar", http.StatusUnauthorized)))
+	require.False(t, translate.IsCredentialError(events.HTTPError{Action: "polling"})) // nil Resp
+}
+
+func TestEventNilErrorsDoNotPanic(t *testing.T) {
+	require.Equal(t, pb.ConnState_CONN_STATE_NETWORK_DOWN, connState(t, translate.Event(&events.ListenTemporaryError{})))
+	fatal := translate.Event(&events.ListenFatalError{})
+	require.Equal(t, pb.ConnState_CONN_STATE_ERROR, connState(t, fatal))
+	require.Empty(t, fatal[0].GetConnectionState().GetDetail())
+	require.Nil(t, translate.Event(&events.PingFailed{}))
+	require.Nil(t, translate.Event(&libgm.WrappedMessage{}))
+	require.Nil(t, translate.Event((*libgm.WrappedMessage)(nil)))
+}
+
+func deletedMsg(st gmproto.MessageStatusType) *libgm.WrappedMessage {
+	return &libgm.WrappedMessage{Message: &gmproto.Message{
+		MessageID: "m9", ConversationID: "c1", MessageStatus: &gmproto.MessageStatus{Status: st},
+	}}
+}
+
+func TestEventMessageDeleted300(t *testing.T) {
+	evts := translate.Event(deletedMsg(gmproto.MessageStatusType_MESSAGE_DELETED))
+	require.Len(t, evts, 1)
+	require.Equal(t, &pb.MessageDeleted{ConversationId: "c1", MessageId: "m9"}, evts[0].GetMessageDeleted())
+}
+
+func TestMobileDBSyncPredicates(t *testing.T) {
+	alert := func(a gmproto.AlertType) any { return &gmproto.UserAlertEvent{AlertType: a} }
+	syncing, ok := translate.MobileDBSync(alert(gmproto.AlertType_MOBILE_DATABASE_SYNC_STARTED))
+	require.True(t, ok)
+	require.True(t, syncing)
+	syncing, ok = translate.MobileDBSync(alert(gmproto.AlertType_MOBILE_DATABASE_SYNC_COMPLETE))
+	require.True(t, ok)
+	require.False(t, syncing)
+	_, ok = translate.MobileDBSync(alert(gmproto.AlertType_BROWSER_ACTIVE))
+	require.False(t, ok)
+	_, ok = translate.MobileDBSync(&events.PhoneNotResponding{})
+	require.False(t, ok)
+
+	require.True(t, translate.SuppressedDuringDBSync(deletedMsg(gmproto.MessageStatusType_MESSAGE_DELETED)))
+	require.False(t, translate.SuppressedDuringDBSync(deletedMsg(gmproto.MessageStatusType_INCOMING_DELETED)))
+	require.False(t, translate.SuppressedDuringDBSync(&libgm.WrappedMessage{}))
+
+	done := translate.Event(alert(gmproto.AlertType_MOBILE_DATABASE_SYNC_COMPLETE))
+	require.Len(t, done, 1)
+	require.NotNil(t, done[0].GetResyncNeeded())
+	require.Nil(t, translate.Event(alert(gmproto.AlertType_MOBILE_DATABASE_SYNC_STARTED)))
 }

@@ -63,7 +63,8 @@ func media(c *gmproto.MediaContent, actionID string) *pb.Media {
 // MessagePage normalises libgm's paging: libgm returns newest first, its cursor timestamp is in
 // milliseconds while message timestamps are microseconds, and a backward page can include items at
 // or after the cursor. The result is oldest first, strictly older than reqCursor, with Next set
-// whenever the page is non-empty (an empty page = fully backfilled).
+// whenever the page is non-empty (an empty page = fully backfilled). libgm's own cursor is used
+// only if it moves past reqCursor; otherwise Next is derived from the oldest kept message.
 func MessagePage(resp *gmproto.ListMessagesResponse, reqCursor *gmproto.Cursor) *pb.MessagePage {
 	msgs := slices.Clone(resp.GetMessages())
 	slices.Reverse(msgs)
@@ -81,10 +82,19 @@ func MessagePage(resp *gmproto.ListMessagesResponse, reqCursor *gmproto.Cursor) 
 	if oldest == nil {
 		return page
 	}
-	if c := resp.GetCursor(); c != nil && c.GetLastItemID() != "" {
+	if c := resp.GetCursor(); c != nil && c.GetLastItemID() != "" && advances(c, reqCursor) {
 		page.Next = cursor(c)
 	} else {
 		page.Next = &pb.Cursor{LastItemId: oldest.GetMessageID(), LastItemTsMs: oldest.GetTimestamp() / 1000}
 	}
 	return page
+}
+
+// advances reports whether libgm's next cursor moves strictly backwards from the request cursor;
+// one that doesn't would make the client re-request the same page forever.
+func advances(next, req *gmproto.Cursor) bool {
+	if req == nil {
+		return true
+	}
+	return next.GetLastItemTimestamp() < req.GetLastItemTimestamp() && next.GetLastItemID() != req.GetLastItemID()
 }

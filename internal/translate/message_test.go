@@ -92,6 +92,28 @@ func TestMessagePageFiltersAtOrAfterCursorAndDerivesNext(t *testing.T) {
 	require.Equal(t, &pb.Cursor{LastItemId: "m1", LastItemTsMs: 1_500}, page.Next)
 }
 
+func TestMessagePageNonAdvancingCursorFallsBackToOldest(t *testing.T) {
+	req := &gmproto.Cursor{LastItemID: "m3", LastItemTimestamp: 3_000}
+	msgs := []*gmproto.Message{
+		gmMsg("m2", 2_000_000, gmproto.MessageStatusType_INCOMING_COMPLETE),
+		gmMsg("m1", 1_500_000, gmproto.MessageStatusType_INCOMING_COMPLETE),
+	}
+	want := &pb.Cursor{LastItemId: "m1", LastItemTsMs: 1_500}
+	for name, c := range map[string]*gmproto.Cursor{
+		"equal":   {LastItemID: "m3", LastItemTimestamp: 3_000},
+		"newer":   {LastItemID: "m9", LastItemTimestamp: 9_000},
+		"same id": {LastItemID: "m3", LastItemTimestamp: 1_000},
+	} {
+		page := translate.MessagePage(&gmproto.ListMessagesResponse{Messages: msgs, Cursor: c}, req)
+		require.Equal(t, want, page.Next, name)
+	}
+	// An advancing libgm cursor is still used as-is.
+	page := translate.MessagePage(&gmproto.ListMessagesResponse{
+		Messages: msgs, Cursor: &gmproto.Cursor{LastItemID: "m1", LastItemTimestamp: 1_400},
+	}, req)
+	require.Equal(t, &pb.Cursor{LastItemId: "m1", LastItemTsMs: 1_400}, page.Next)
+}
+
 func TestMessagePageEmptyMeansFullyBackfilled(t *testing.T) {
 	page := translate.MessagePage(&gmproto.ListMessagesResponse{
 		Cursor: &gmproto.Cursor{LastItemID: "x", LastItemTimestamp: 5},

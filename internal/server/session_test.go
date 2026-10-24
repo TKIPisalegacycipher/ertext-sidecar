@@ -40,6 +40,8 @@ func req(id uint64, body any) *pb.Request {
 		r.Body = &pb.Request_MarkRead{MarkRead: b}
 	case *pb.DownloadMedia:
 		r.Body = &pb.Request_DownloadMedia{DownloadMedia: b}
+	case *pb.RequestFullMedia:
+		r.Body = &pb.Request_RequestFullMedia{RequestFullMedia: b}
 	case *pb.GetThumbnails:
 		r.Body = &pb.Request_GetThumbnails{GetThumbnails: b}
 	default:

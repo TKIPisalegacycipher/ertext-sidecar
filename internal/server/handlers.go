@@ -51,6 +51,8 @@ func (s *Server) handle(req *pb.Request) *pb.Response {
 		return s.markRead(b.MarkRead)
 	case *pb.Request_DownloadMedia:
 		return s.downloadMedia(b.DownloadMedia)
+	case *pb.Request_RequestFullMedia:
+		return s.requestFullMedia(b.RequestFullMedia)
 	case *pb.Request_GetThumbnails:
 		return s.getThumbnails(b.GetThumbnails)
 	default:
@@ -367,6 +369,19 @@ func (s *Server) markRead(r *pb.MarkRead) *pb.Response {
 	}
 	return s.withClient(requestTimeout, func(ctx context.Context, c gm.Client) *pb.Response {
 		return ackOr(c.MarkRead(ctx, r.GetConversationId(), r.GetMessageId()))
+	})
+}
+
+// requestFullMedia asks the phone to upload the original; it answers later with a message update
+// whose media has a media_id, so this only acks that the request was made.
+func (s *Server) requestFullMedia(r *pb.RequestFullMedia) *pb.Response {
+	if r.GetMessageId() == "" || r.GetActionMessageId() == "" {
+		return errResp(badRequest("message_id and action_message_id required"))
+	}
+	return s.withClient(requestTimeout, func(ctx context.Context, c gm.Client) *pb.Response {
+		_, err := c.GetFullSizeImage(ctx, r.GetMessageId(), r.GetActionMessageId())
+		s.log.Info().Str("message_id", r.GetMessageId()).Bool("ok", err == nil).Msg("requested full-size media")
+		return ackOr(err)
 	})
 }
 

@@ -35,8 +35,11 @@ type Server struct {
 	// the pairing first (mautrix-gmessages waits 2 s for the same reason).
 	PairSettle time.Duration
 
-	ctx context.Context
-	out chan *pb.Envelope
+	ctx        context.Context // work context: canceled at shutdown; libgm long-poll lives on it
+	out        chan *pb.Envelope
+	writerDone chan struct{} // closed when the writer exits
+	outMu      sync.RWMutex  // guards outClosed and closing out
+	outClosed  bool
 
 	mu  sync.Mutex
 	cli gm.Client
@@ -47,29 +50,48 @@ func New(f gm.Factory, log zerolog.Logger, sidecarVersion, libgmVersion string) 
 }
 
 // Run serves until r reaches EOF (nil), a frame can't be decoded, or w fails (error).
+//
+// Shutdown order on EOF or a bad frame: cancel the work context (aborts in-flight libgm calls),
+// wait for handlers, disconnect libgm, then close the output queue so the writer drains every
+// queued Response/Event before Run returns. On a write failure Run returns at once; the reader
+// goroutine may stay blocked on r, which is fine because the process is about to exit.
 func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	s.ctx = ctx
 	s.out = make(chan *pb.Envelope, 256)
+	s.writerDone = make(chan struct{})
 
 	writeErr := make(chan error, 1)
-	go func() { writeErr <- s.writeLoop(ctx, cancel, w) }()
+	go func() {
+		err := s.writeLoop(w)
+		close(s.writerDone)
+		writeErr <- err
+	}()
 
 	s.emit(&pb.Event{Body: &pb.Event_Hello{Hello: &pb.Hello{
 		ProtocolVersion: ProtocolVersion, SidecarVersion: s.sidecarVersion, LibgmVersion: s.libgmVersion,
 	}}})
 
 	var handlers sync.WaitGroup
-	readErr := s.readLoop(r, &handlers)
+	readDone := make(chan error, 1)
+	go func() { readDone <- s.readLoop(r, &handlers) }()
 
-	s.replace(nil) // disconnect libgm before exiting
-	cancel()
-	handlers.Wait()
-	if err := <-writeErr; err != nil {
+	select {
+	case err := <-writeErr:
+		cancel()
+		s.replace(nil)
 		return err
+	case readErr := <-readDone:
+		cancel()
+		handlers.Wait()
+		s.replace(nil) // disconnect libgm before exiting
+		s.closeOut()
+		if err := <-writeErr; err != nil {
+			return err
+		}
+		return readErr
 	}
-	return readErr
 }
 
 func (s *Server) readLoop(r io.Reader, handlers *sync.WaitGroup) error {
@@ -99,28 +121,41 @@ func (s *Server) readLoop(r io.Reader, handlers *sync.WaitGroup) error {
 	}
 }
 
-func (s *Server) writeLoop(ctx context.Context, cancel context.CancelFunc, w io.Writer) error {
-	for {
-		select {
-		case env := <-s.out:
-			b, err := proto.Marshal(env)
-			if err == nil {
-				err = frame.Write(w, b)
-			}
-			if err != nil {
-				cancel()
-				return fmt.Errorf("write frame: %w", err)
-			}
-		case <-ctx.Done():
-			return nil
+// writeLoop writes queued envelopes until s.out is closed and drained, or a write fails.
+func (s *Server) writeLoop(w io.Writer) error {
+	for env := range s.out {
+		b, err := proto.Marshal(env)
+		if err == nil {
+			err = frame.Write(w, b)
 		}
+		if err != nil {
+			return fmt.Errorf("write frame: %w", err)
+		}
+	}
+	return nil
+}
+
+// send queues env for the writer. It deliberately ignores s.ctx so responses produced during
+// shutdown are still written; it gives up only when the writer has exited or the queue is closed.
+func (s *Server) send(env *pb.Envelope) {
+	s.outMu.RLock()
+	defer s.outMu.RUnlock()
+	if s.outClosed {
+		return
+	}
+	select {
+	case s.out <- env:
+	case <-s.writerDone:
 	}
 }
 
-func (s *Server) send(env *pb.Envelope) {
-	select {
-	case s.out <- env:
-	case <-s.ctx.Done():
+// closeOut stops accepting envelopes; the writer drains what is queued and exits.
+func (s *Server) closeOut() {
+	s.outMu.Lock()
+	defer s.outMu.Unlock()
+	if !s.outClosed {
+		s.outClosed = true
+		close(s.out)
 	}
 }
 

@@ -32,8 +32,8 @@ func (s *Server) connect(r *pb.Connect) *pb.Response {
 	if err != nil {
 		return errResp(err)
 	}
-	s.replace(c)
 	c.SetEventHandler(s.handlerFor(c))
+	s.replace(c)
 	ctx, cancel := context.WithTimeout(s.ctx, requestTimeout)
 	defer cancel()
 	if err := c.FetchConfig(ctx); err != nil {
@@ -42,6 +42,10 @@ func (s *Server) connect(r *pb.Connect) *pb.Response {
 	if err := c.Connect(s.ctx); err != nil { // long polling lives on the server context
 		s.dropIf(c)
 		return errResp(err)
+	}
+	if s.current() != c { // a later Connect/StartPairing replaced c while it was connecting
+		c.Disconnect()
+		return errResp(fmt.Errorf("connect superseded by a later Connect/StartPairing"))
 	}
 	return ack()
 }

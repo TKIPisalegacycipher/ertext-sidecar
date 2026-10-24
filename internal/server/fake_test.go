@@ -32,6 +32,8 @@ type fakeClient struct {
 	refreshQR string
 	err       map[string]error
 
+	connectGate chan struct{} // if set, Connect blocks until it is closed
+
 	listReq   *gmproto.ListConversationsRequest
 	listResp  *gmproto.ListConversationsResponse
 	fetchArgs []any
@@ -91,40 +93,84 @@ func (f *fakeClient) SetPairCallback(cb func(*gmproto.PairedData)) {
 	f.pairCB = cb
 	f.mu.Unlock()
 }
-func (f *fakeClient) SessionBlob() ([]byte, error)               { return f.blob, f.record("blob") }
-func (f *fakeClient) FetchConfig(context.Context) error          { return f.record("config") }
-func (f *fakeClient) StartLogin(context.Context) (string, error) { return f.qr, f.record("login") }
-func (f *fakeClient) RefreshPhoneRelay() (string, error)         { return f.refreshQR, f.record("refresh") }
-func (f *fakeClient) Connect(context.Context) error              { return f.record("connect") }
-func (f *fakeClient) Disconnect()                                { _ = f.record("disconnect") }
-func (f *fakeClient) Unpair(context.Context) error               { return f.record("unpair") }
-func (f *fakeClient) SetActiveSession(context.Context) error     { return f.record("setactive") }
+func (f *fakeClient) SessionBlob() ([]byte, error) {
+	f.mu.Lock()
+	b := f.blob
+	f.mu.Unlock()
+	return b, f.record("blob")
+}
+func (f *fakeClient) FetchConfig(context.Context) error { return f.record("config") }
+func (f *fakeClient) StartLogin(context.Context) (string, error) {
+	f.mu.Lock()
+	q := f.qr
+	f.mu.Unlock()
+	return q, f.record("login")
+}
+func (f *fakeClient) RefreshPhoneRelay() (string, error) {
+	f.mu.Lock()
+	q := f.refreshQR
+	f.mu.Unlock()
+	return q, f.record("refresh")
+}
+func (f *fakeClient) Connect(context.Context) error {
+	err := f.record("connect")
+	f.mu.Lock()
+	gate := f.connectGate
+	f.mu.Unlock()
+	if gate != nil {
+		<-gate
+	}
+	return err
+}
+func (f *fakeClient) Disconnect()                            { _ = f.record("disconnect") }
+func (f *fakeClient) Unpair(context.Context) error           { return f.record("unpair") }
+func (f *fakeClient) SetActiveSession(context.Context) error { return f.record("setactive") }
 func (f *fakeClient) ListConversations(_ context.Context, r *gmproto.ListConversationsRequest) (*gmproto.ListConversationsResponse, error) {
+	f.mu.Lock()
 	f.listReq = r
-	return f.listResp, f.record("list")
+	resp := f.listResp
+	f.mu.Unlock()
+	return resp, f.record("list")
 }
 func (f *fakeClient) FetchMessages(_ context.Context, id string, n int64, c *gmproto.Cursor) (*gmproto.ListMessagesResponse, error) {
+	f.mu.Lock()
 	f.fetchArgs = []any{id, n, c}
-	return f.fetchResp, f.record("fetch")
+	resp := f.fetchResp
+	f.mu.Unlock()
+	return resp, f.record("fetch")
 }
 func (f *fakeClient) SendMessage(_ context.Context, r *gmproto.SendMessageRequest) (*gmproto.SendMessageResponse, error) {
+	f.mu.Lock()
 	f.sendReq = r
-	return f.sendResp, f.record("send")
+	resp := f.sendResp
+	f.mu.Unlock()
+	return resp, f.record("send")
 }
 func (f *fakeClient) SendReaction(_ context.Context, r *gmproto.SendReactionRequest) (*gmproto.SendReactionResponse, error) {
+	f.mu.Lock()
 	f.reactReq = r
-	return f.reactResp, f.record("react")
+	resp := f.reactResp
+	f.mu.Unlock()
+	return resp, f.record("react")
 }
 func (f *fakeClient) MarkRead(_ context.Context, c, m string) error {
+	f.mu.Lock()
 	f.readArgs = [2]string{c, m}
+	f.mu.Unlock()
 	return f.record("markread")
 }
 func (f *fakeClient) DownloadMedia(context.Context, string, []byte) (io.ReadCloser, error) {
-	return io.NopCloser(bytes.NewReader(f.media)), f.record("download")
+	f.mu.Lock()
+	media := f.media
+	f.mu.Unlock()
+	return io.NopCloser(bytes.NewReader(media)), f.record("download")
 }
 func (f *fakeClient) GetParticipantThumbnail(_ context.Context, ids ...string) (*gmproto.GetThumbnailResponse, error) {
+	f.mu.Lock()
 	f.thumbIDs = ids
-	return f.thumbs, f.record("thumbs")
+	resp := f.thumbs
+	f.mu.Unlock()
+	return resp, f.record("thumbs")
 }
 
 type harness struct {

@@ -72,7 +72,7 @@ func (s *Server) connect(r *pb.Connect) *pb.Response {
 	}
 	if err := c.Connect(s.ctx); err != nil { // long polling lives on the server context
 		s.abandon(c)
-		return errResp(err)
+		return errResp(authRejected(err))
 	}
 	if s.current() != c { // a later Connect/StartPairing replaced c while it was connecting
 		c.Disconnect()

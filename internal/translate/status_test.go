@@ -34,7 +34,8 @@ func TestStatus(t *testing.T) {
 	for in, want := range cases {
 		require.Equal(t, want, translate.Status(in), in.String())
 	}
-	require.True(t, translate.IsDeleted(gmproto.MessageStatusType_INCOMING_DELETED))
+	require.False(t, translate.IsDeleted(gmproto.MessageStatusType_INCOMING_DELETED))
+	require.False(t, translate.IsDeleted(gmproto.MessageStatusType_OUTGOING_DELETED))
 	require.True(t, translate.IsDeleted(gmproto.MessageStatusType_MESSAGE_DELETED))
 	require.False(t, translate.IsDeleted(gmproto.MessageStatusType_INCOMING_COMPLETE))
 }

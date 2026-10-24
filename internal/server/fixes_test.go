@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"slices"
@@ -39,7 +40,7 @@ func TestMessageDeletedSuppressedDuringMobileDBSync(t *testing.T) {
 
 	f.fire(alert(gmproto.AlertType_MOBILE_DATABASE_SYNC_STARTED))
 	f.fire(wrapped("m-sync", gmproto.MessageStatusType_MESSAGE_DELETED))   // dropped
-	f.fire(wrapped("m-other", gmproto.MessageStatusType_INCOMING_DELETED)) // not 300: still sent
+	f.fire(wrapped("m-other", gmproto.MessageStatusType_INCOMING_DELETED)) // not 300: still sent (as an upsert)
 	f.fire(wrapped("m-new", gmproto.MessageStatusType_INCOMING_COMPLETE))  // upserts still flow
 	f.fire(alert(gmproto.AlertType_MOBILE_DATABASE_SYNC_COMPLETE))         // -> ResyncNeeded
 	h.event(func(e *pb.Event) bool { return e.GetResyncNeeded() != nil })  // events arrive in order
@@ -49,7 +50,9 @@ func TestMessageDeletedSuppressedDuringMobileDBSync(t *testing.T) {
 	for _, e := range h.events {
 		require.NotEqual(t, "m-sync", e.GetMessageDeleted().GetMessageId(), "MESSAGE_DELETED leaked during sync")
 	}
-	require.NotNil(t, h.event(isDeleted("m-other")))
+	require.Equal(t, pb.MessageStatus_MESSAGE_STATUS_DELETED, h.event(func(e *pb.Event) bool {
+		return e.GetMessageUpserted().GetMessage().GetId() == "m-other"
+	}).GetMessageUpserted().GetMessage().GetStatus())
 	require.NotNil(t, h.event(func(e *pb.Event) bool { return e.GetMessageUpserted().GetMessage().GetId() == "m-new" }))
 	require.NoError(t, h.close())
 }
@@ -80,12 +83,29 @@ func httpErr(action string, code int) error {
 }
 
 func TestCodeForHTTPErrors(t *testing.T) {
-	for _, code := range []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound} {
-		require.Equal(t, pb.ErrorCode_ERROR_CODE_UNAUTHORIZED, codeFor(errors.Join(errors.New("failed to refresh auth token"), httpErr("", code))), code)
-		require.Equal(t, pb.ErrorCode_ERROR_CODE_UNAUTHORIZED, codeFor(httpErr("polling", code)), code)
+	// A non-Connect RPC (SendMessage etc.) hitting 401/403/404 is not an unpairing signal.
+	for _, code := range []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound, http.StatusInternalServerError} {
+		require.Equal(t, pb.ErrorCode_ERROR_CODE_INTERNAL, codeFor(httpErr("", code)), code)
+		require.Equal(t, pb.ErrorCode_ERROR_CODE_INTERNAL, codeFor(fmt.Errorf("send: %w", httpErr("", code))), code)
 	}
-	require.Equal(t, pb.ErrorCode_ERROR_CODE_INTERNAL, codeFor(httpErr("", http.StatusInternalServerError)))
 	require.Equal(t, pb.ErrorCode_ERROR_CODE_INTERNAL, codeFor(events.HTTPError{})) // nil Resp
+}
+
+func TestAuthRejectedOnlyForFatalStatuses(t *testing.T) {
+	for _, code := range []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound} {
+		err := authRejected(errors.Join(errors.New("failed to refresh auth token"), httpErr("", code)))
+		require.Equal(t, pb.ErrorCode_ERROR_CODE_UNAUTHORIZED, codeFor(err), code)
+	}
+	require.Equal(t, pb.ErrorCode_ERROR_CODE_INTERNAL, codeFor(authRejected(httpErr("", http.StatusInternalServerError))))
+	require.Equal(t, pb.ErrorCode_ERROR_CODE_INTERNAL, codeFor(authRejected(events.HTTPError{})))
+}
+
+func TestSendMessage403IsInternal(t *testing.T) {
+	h, f := connected(t)
+	f.err["send"] = httpErr("", http.StatusForbidden)
+	h.send(req(2, &pb.SendMessage{ConversationId: "c1", Text: "hi", TmpId: "t"}))
+	require.Equal(t, pb.ErrorCode_ERROR_CODE_INTERNAL, h.response(2).GetError().GetCode())
+	require.NoError(t, h.close())
 }
 
 func TestConnectFatalRefreshHTTPErrorIsUnauthorized(t *testing.T) {

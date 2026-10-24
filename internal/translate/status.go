@@ -35,15 +35,15 @@ var downloading = map[gmproto.MessageStatusType]bool{
 	gmproto.MessageStatusType_INCOMING_AWAITING_AUTO_DOWNLOAD:   true,
 }
 
-// IsDeleted reports libgm's "this message was deleted" statuses (sent as MessageDeleted).
-// MESSAGE_DELETED (300) is the one mautrix-gmessages treats as a remove.
+// IsDeleted reports the one status that is a true removal (sent as MessageDeleted):
+// MESSAGE_DELETED (300), as in mautrix-gmessages. OUTGOING_DELETED (23) and INCOMING_DELETED (117)
+// are upserts that Status maps to MESSAGE_STATUS_DELETED.
 func IsDeleted(s gmproto.MessageStatusType) bool {
-	switch s {
-	case gmproto.MessageStatusType_OUTGOING_DELETED, gmproto.MessageStatusType_INCOMING_DELETED,
-		gmproto.MessageStatusType_MESSAGE_DELETED:
-		return true
-	}
-	return false
+	return s == gmproto.MessageStatusType_MESSAGE_DELETED
+}
+
+func isDeletedPlaceholder(s gmproto.MessageStatusType) bool {
+	return s == gmproto.MessageStatusType_OUTGOING_DELETED || s == gmproto.MessageStatusType_INCOMING_DELETED
 }
 
 func isOutgoing(s gmproto.MessageStatusType) bool {
@@ -58,7 +58,7 @@ func Status(s gmproto.MessageStatusType) pb.MessageStatus {
 	switch {
 	case s == gmproto.MessageStatusType_STATUS_UNKNOWN:
 		return pb.MessageStatus_MESSAGE_STATUS_UNSPECIFIED
-	case IsDeleted(s):
+	case IsDeleted(s), isDeletedPlaceholder(s):
 		return pb.MessageStatus_MESSAGE_STATUS_DELETED
 	case s == gmproto.MessageStatusType_OUTGOING_COMPLETE:
 		return pb.MessageStatus_MESSAGE_STATUS_SENT

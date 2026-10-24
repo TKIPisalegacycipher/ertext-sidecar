@@ -74,9 +74,18 @@ func TestEventConversationsAndMessages(t *testing.T) {
 
 	del := translate.Event(&libgm.WrappedMessage{Message: &gmproto.Message{
 		MessageID: "m2", ConversationID: "c1",
-		MessageStatus: &gmproto.MessageStatus{Status: gmproto.MessageStatusType_INCOMING_DELETED},
+		MessageStatus: &gmproto.MessageStatus{Status: gmproto.MessageStatusType_MESSAGE_DELETED},
 	}})
 	require.Equal(t, &pb.MessageDeleted{ConversationId: "c1", MessageId: "m2"}, del[0].GetMessageDeleted())
+}
+
+func TestEventPlaceholderDeletesAreUpserts(t *testing.T) {
+	for _, st := range []gmproto.MessageStatusType{gmproto.MessageStatusType_INCOMING_DELETED, gmproto.MessageStatusType_OUTGOING_DELETED} {
+		evts := translate.Event(deletedMsg(st))
+		require.Len(t, evts, 1, st.String())
+		require.Nil(t, evts[0].GetMessageDeleted(), st.String())
+		require.Equal(t, pb.MessageStatus_MESSAGE_STATUS_DELETED, evts[0].GetMessageUpserted().GetMessage().GetStatus(), st.String())
+	}
 }
 
 func TestEventSimsAndResync(t *testing.T) {

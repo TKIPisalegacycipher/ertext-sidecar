@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"go.mau.fi/mautrix-gmessages/pkg/libgm"
@@ -20,18 +21,22 @@ var errSendFailed = errors.New("send failed")
 // errInternal is what a request gets when its handler panicked.
 var errInternal = errors.New("internal error")
 
-// isFatalHTTPError mirrors the HTTP cases of libgm's isFatalRefreshError: Connect's token
-// refresh fails with an HTTPError carrying 401/403/404 when Google rejects the pairing.
-func isFatalHTTPError(err error) bool {
+// errAuthRejected marks an error from Connect whose HTTP status says Google rejected the pairing.
+var errAuthRejected = errors.New("session rejected")
+
+// authRejected mirrors the HTTP cases of libgm's isFatalRefreshError: Connect's token refresh
+// fails with an HTTPError carrying 401/403/404 when Google rejects the pairing. It applies only
+// to Connect's error: on other RPCs a 403/404 can be transient and must not look like unpairing.
+func authRejected(err error) error {
 	var httpErr events.HTTPError
 	if !errors.As(err, &httpErr) || httpErr.Resp == nil {
-		return false
+		return err
 	}
 	switch httpErr.Resp.StatusCode {
 	case http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound:
-		return true
+		return fmt.Errorf("%w: %w", errAuthRejected, err)
 	}
-	return false
+	return err
 }
 
 func codeFor(err error) pb.ErrorCode {
@@ -40,7 +45,7 @@ func codeFor(err error) pb.ErrorCode {
 		return pb.ErrorCode_ERROR_CODE_NOT_CONNECTED
 	case errors.Is(err, translate.ErrBadRequest):
 		return pb.ErrorCode_ERROR_CODE_BAD_REQUEST
-	case translate.IsCredentialError(err), isFatalHTTPError(err):
+	case errors.Is(err, errAuthRejected), translate.IsCredentialError(err):
 		return pb.ErrorCode_ERROR_CODE_UNAUTHORIZED
 	case errors.Is(err, libgm.ErrPhoneNotResponding):
 		return pb.ErrorCode_ERROR_CODE_PHONE_NOT_RESPONDING

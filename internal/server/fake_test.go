@@ -277,3 +277,11 @@ func (h *harness) close() error {
 }
 
 func isHello(e *pb.Event) bool { return e.GetHello() != nil }
+
+func (f *fakeClient) sessionArg() []byte {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.session
+}
+
+type gmClient = gm.Client

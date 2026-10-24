@@ -89,6 +89,18 @@ func TestMarkRead(t *testing.T) {
 	require.NoError(t, h.close())
 }
 
+func TestRequestFullMedia(t *testing.T) {
+	h, f := connected(t)
+	h.send(req(2, &pb.RequestFullMedia{MessageId: "m9", ActionMessageId: "a1"}))
+	require.NotNil(t, h.response(2).GetAck())
+	f.mu.Lock()
+	require.Equal(t, [2]string{"m9", "a1"}, f.fullArgs)
+	f.mu.Unlock()
+	h.send(req(3, &pb.RequestFullMedia{MessageId: "m9"}))
+	require.Equal(t, pb.ErrorCode_ERROR_CODE_BAD_REQUEST, h.response(3).GetError().GetCode())
+	require.NoError(t, h.close())
+}
+
 func TestThumbnails(t *testing.T) {
 	h, f := connected(t)
 	f.setThumbs(&gmproto.GetThumbnailResponse{Thumbnail: []*gmproto.GetThumbnailResponse_Thumbnail{

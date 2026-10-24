@@ -49,6 +49,7 @@ type fakeClient struct {
 	reactReq  *gmproto.SendReactionRequest
 	reactResp *gmproto.SendReactionResponse
 	readArgs  [2]string
+	fullArgs  [2]string
 	media     []byte
 	thumbIDs  []string
 	thumbs    *gmproto.GetThumbnailResponse
@@ -205,6 +206,12 @@ func (f *fakeClient) MarkRead(_ context.Context, c, m string) error {
 	f.readArgs = [2]string{c, m}
 	f.mu.Unlock()
 	return f.record("markread")
+}
+func (f *fakeClient) GetFullSizeImage(_ context.Context, m, a string) (*gmproto.GetFullSizeImageResponse, error) {
+	f.mu.Lock()
+	f.fullArgs = [2]string{m, a}
+	f.mu.Unlock()
+	return &gmproto.GetFullSizeImageResponse{}, f.record("fullsize")
 }
 func (f *fakeClient) DownloadMedia(context.Context, string, []byte) (io.ReadCloser, error) {
 	f.mu.Lock()

@@ -35,6 +35,7 @@ message Request {
     DownloadMedia download_media = 22;
     GetThumbnails get_thumbnails = 23;
     StartGoogleLogin start_google_login = 24; // QR pairing was discontinued by Google
+    RequestFullMedia request_full_media = 25;
   }
 }
 
@@ -108,6 +109,13 @@ message DownloadMedia {
   string media_id = 1;
   bytes key = 2;
   string dest_path = 3; // absolute; written via dest_path + ".part" then renamed
+}
+
+// Asks the phone to upload the original of a message's media. The phone answers later with a
+// MessageUpserted whose media now has a media_id and key; this only acks that it was asked.
+message RequestFullMedia {
+  string message_id = 1;
+  string action_message_id = 2;
 }
 
 message GetThumbnails {

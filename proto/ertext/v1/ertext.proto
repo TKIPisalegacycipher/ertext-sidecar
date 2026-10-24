@@ -1,0 +1,350 @@
+// SPDX-License-Identifier: MIT
+// Ertext <-> ertext-sidecar protocol. Frames on the sidecar's stdio: u32 little-endian length,
+// then one Envelope. The sidecar's first frame is Event{hello}.
+syntax = "proto3";
+
+package ertext.v1;
+
+option go_package = "github.com/TKIPisalegacycipher/ertext-sidecar/internal/pb";
+
+message Envelope {
+  oneof kind {
+    Request request = 1;
+    Response response = 2;
+    Event event = 3;
+  }
+}
+
+// ---------- requests (Ertext -> sidecar) ----------
+
+message Request {
+  uint64 id = 1;
+  oneof body {
+    Ping ping = 10;
+    StartPairing start_pairing = 11;
+    RefreshPairing refresh_pairing = 12;
+    Connect connect = 13;
+    Disconnect disconnect = 14;
+    Unpair unpair = 15;
+    SetActive set_active = 16;
+    ListConversations list_conversations = 17;
+    FetchMessages fetch_messages = 18;
+    SendMessage send_message = 19;
+    SendReaction send_reaction = 20;
+    MarkRead mark_read = 21;
+    DownloadMedia download_media = 22;
+    GetThumbnails get_thumbnails = 23;
+  }
+}
+
+message Ping {}
+message StartPairing {}
+message RefreshPairing {}
+message Connect {
+  bytes session_blob = 1;
+}
+message Disconnect {}
+message Unpair {}
+message SetActive {}
+
+enum Folder {
+  FOLDER_UNSPECIFIED = 0; // treated as INBOX
+  FOLDER_INBOX = 1;
+  FOLDER_ARCHIVE = 2;
+}
+
+message Cursor {
+  string last_item_id = 1;
+  int64 last_item_ts_ms = 2;
+}
+
+message ListConversations {
+  int32 count = 1;
+  Folder folder = 2;
+  Cursor cursor = 3; // absent = first page
+}
+
+message FetchMessages {
+  string conversation_id = 1;
+  int32 count = 2;
+  Cursor cursor = 3; // absent = newest page
+}
+
+message Sim {
+  int32 sim_number = 1;
+  int32 payload_kind = 2; // opaque libgm SIM payload discriminator; echo what SimsUpdated gave
+}
+
+message SendMessage {
+  string conversation_id = 1;
+  string outgoing_participant_id = 2;
+  Sim sim = 3;
+  string text = 4;
+  string reply_to_id = 5; // empty = not a reply; only meaningful for RCS targets
+  string tmp_id = 6; // required; echoed back on MessageUpserted
+}
+
+enum ReactionAction {
+  REACTION_ACTION_UNSPECIFIED = 0; // rejected
+  REACTION_ACTION_ADD = 1;
+  REACTION_ACTION_REMOVE = 2;
+  REACTION_ACTION_SWITCH = 3;
+}
+
+message SendReaction {
+  string message_id = 1;
+  string emoji = 2;
+  ReactionAction action = 3;
+  Sim sim = 4;
+}
+
+message MarkRead {
+  string conversation_id = 1;
+  string message_id = 2;
+}
+
+message DownloadMedia {
+  string media_id = 1;
+  bytes key = 2;
+  string dest_path = 3; // absolute; written via dest_path + ".part" then renamed
+}
+
+message GetThumbnails {
+  repeated string participant_ids = 1;
+}
+
+// ---------- responses (sidecar -> Ertext) ----------
+
+message Response {
+  uint64 id = 1;
+  oneof result {
+    RpcError error = 2;
+    Ack ack = 10;
+    Pong pong = 11;
+    ConversationPage conversation_page = 12;
+    MessagePage message_page = 13;
+    Thumbnails thumbnails = 14;
+  }
+}
+
+enum ErrorCode {
+  ERROR_CODE_UNSPECIFIED = 0;
+  ERROR_CODE_INTERNAL = 1;
+  ERROR_CODE_NOT_CONNECTED = 2; // no client: Connect or StartPairing first
+  ERROR_CODE_BAD_REQUEST = 3;
+  ERROR_CODE_UNAUTHORIZED = 4; // session invalid; re-pair
+  ERROR_CODE_PHONE_NOT_RESPONDING = 5;
+  ERROR_CODE_SEND_FAILED = 6;
+  ERROR_CODE_TIMEOUT = 7;
+}
+
+message RpcError {
+  ErrorCode code = 1;
+  string message = 2;
+}
+
+message Ack {}
+message Pong {}
+
+message ConversationPage {
+  repeated Conversation conversations = 1;
+  Cursor next = 2; // absent = no more pages
+}
+
+message MessagePage {
+  repeated Message messages = 1; // oldest first, all strictly older than the request cursor
+  Cursor next = 2; // absent only when messages is empty (= fully backfilled)
+  int64 total_messages = 3;
+}
+
+message Thumbnail {
+  string participant_id = 1;
+  bytes image = 2;
+}
+
+message Thumbnails {
+  repeated Thumbnail thumbnails = 1;
+}
+
+// ---------- domain types ----------
+
+enum ConversationType {
+  CONVERSATION_TYPE_UNSPECIFIED = 0;
+  CONVERSATION_TYPE_SMS = 1;
+  CONVERSATION_TYPE_RCS = 2;
+}
+
+enum ConversationStatus {
+  CONVERSATION_STATUS_UNSPECIFIED = 0;
+  CONVERSATION_STATUS_ACTIVE = 1;
+  CONVERSATION_STATUS_ARCHIVED = 2;
+  CONVERSATION_STATUS_DELETED = 3;
+  CONVERSATION_STATUS_SPAM = 4;
+  CONVERSATION_STATUS_BLOCKED = 5;
+  CONVERSATION_STATUS_OTHER = 6;
+}
+
+message Participant {
+  string id = 1;
+  string full_name = 2;
+  string first_name = 3;
+  string formatted_number = 4;
+  bool is_me = 5;
+  string avatar_hex_color = 6;
+  string contact_id = 7;
+  bool is_visible = 8;
+}
+
+message Conversation {
+  string id = 1;
+  string name = 2;
+  bool is_group = 3;
+  ConversationType type = 4;
+  int64 last_message_ts_us = 5;
+  bool unread = 6;
+  ConversationStatus status = 7;
+  bool read_only = 8;
+  bool pinned = 9;
+  string default_outgoing_id = 10;
+  repeated Participant participants = 11;
+  string latest_message_id = 12;
+  string snippet = 13;
+  bool snippet_from_me = 14;
+  string snippet_sender = 15;
+  string avatar_hex_color = 16;
+  string group_avatar_url = 17;
+}
+
+enum MessageKind {
+  MESSAGE_KIND_UNSPECIFIED = 0;
+  MESSAGE_KIND_SMS = 1;
+  MESSAGE_KIND_MMS = 2;
+  MESSAGE_KIND_RCS = 3;
+  MESSAGE_KIND_SYSTEM = 4; // tombstones: joined, left, renamed, protocol switch...
+}
+
+enum MessageStatus {
+  MESSAGE_STATUS_UNSPECIFIED = 0;
+  MESSAGE_STATUS_PENDING = 1; // outgoing, not yet sent
+  MESSAGE_STATUS_SENT = 2;
+  MESSAGE_STATUS_DELIVERED = 3;
+  MESSAGE_STATUS_READ = 4;
+  MESSAGE_STATUS_FAILED = 5;
+  MESSAGE_STATUS_INCOMING = 6;
+  MESSAGE_STATUS_INCOMING_DOWNLOADING = 7; // MMS content still downloading on the phone
+  MESSAGE_STATUS_DELETED = 8;
+}
+
+message Reaction {
+  string emoji = 1;
+  repeated string participant_ids = 2;
+}
+
+message Media {
+  string media_id = 1;
+  bytes key = 2;
+  string thumb_media_id = 3;
+  bytes thumb_key = 4;
+  string mime = 5;
+  string name = 6;
+  int64 size = 7;
+  int64 width = 8;
+  int64 height = 9;
+  string action_message_id = 10;
+}
+
+message Message {
+  string id = 1;
+  string tmp_id = 2;
+  string conversation_id = 3;
+  string sender_participant_id = 4;
+  int64 timestamp_us = 5;
+  MessageKind kind = 6;
+  MessageStatus status = 7;
+  int32 raw_status = 8; // libgm status number, for diagnostics only
+  string text = 9;
+  string subject = 10;
+  string reply_to_id = 11;
+  repeated Media media = 12;
+  repeated Reaction reactions = 13;
+  bool from_me = 14;
+}
+
+message SimCard {
+  Sim sim = 1;
+  string participant_id = 2; // matches Conversation.default_outgoing_id
+  string carrier_name = 3;
+  string formatted_number = 4;
+  string color_hex = 5;
+}
+
+// ---------- events (sidecar -> Ertext) ----------
+
+message Event {
+  oneof body {
+    Hello hello = 1;
+    SessionUpdated session_updated = 2;
+    ConnectionState connection_state = 3;
+    PairQr pair_qr = 4;
+    PairSuccess pair_success = 5;
+    ConversationUpserted conversation_upserted = 6;
+    MessageUpserted message_upserted = 7;
+    MessageDeleted message_deleted = 8;
+    SimsUpdated sims_updated = 9;
+    ResyncNeeded resync_needed = 10;
+  }
+}
+
+message Hello {
+  uint32 protocol_version = 1;
+  string sidecar_version = 2;
+  string libgm_version = 3;
+}
+
+message SessionUpdated {
+  bytes session_blob = 1;
+}
+
+enum ConnState {
+  CONN_STATE_UNSPECIFIED = 0;
+  CONN_STATE_CONNECTED = 1;
+  CONN_STATE_PHONE_OFFLINE = 2;
+  CONN_STATE_PHONE_ONLINE = 3;
+  CONN_STATE_TAKEN_ELSEWHERE = 4;
+  CONN_STATE_UNPAIRED = 5;
+  CONN_STATE_NETWORK_DOWN = 6;
+  CONN_STATE_ERROR = 7;
+}
+
+message ConnectionState {
+  ConnState state = 1;
+  string detail = 2; // human-readable, no message content
+}
+
+message PairQr {
+  string url = 1;
+}
+
+message PairSuccess {
+  bytes session_blob = 1;
+}
+
+message ConversationUpserted {
+  Conversation conversation = 1;
+}
+
+message MessageUpserted {
+  Message message = 1;
+  bool is_old = 2; // libgm marks replayed history; don't notify
+}
+
+message MessageDeleted {
+  string conversation_id = 1;
+  string message_id = 2;
+}
+
+message SimsUpdated {
+  repeated SimCard sims = 1;
+}
+
+message ResyncNeeded {}

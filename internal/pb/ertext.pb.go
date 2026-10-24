@@ -137,19 +137,25 @@ const (
 	ErrorCode_ERROR_CODE_PHONE_NOT_RESPONDING ErrorCode = 5
 	ErrorCode_ERROR_CODE_SEND_FAILED          ErrorCode = 6
 	ErrorCode_ERROR_CODE_TIMEOUT              ErrorCode = 7
+	ErrorCode_ERROR_CODE_PAIRING_REJECTED     ErrorCode = 8  // wrong emoji tapped, or pairing cancelled on the phone
+	ErrorCode_ERROR_CODE_NO_PHONE             ErrorCode = 9  // no phone with Google Messages found on this Google account
+	ErrorCode_ERROR_CODE_NOT_SIGNED_IN        ErrorCode = 10 // Google cookies missing, expired or rejected: sign in again
 )
 
 // Enum value maps for ErrorCode.
 var (
 	ErrorCode_name = map[int32]string{
-		0: "ERROR_CODE_UNSPECIFIED",
-		1: "ERROR_CODE_INTERNAL",
-		2: "ERROR_CODE_NOT_CONNECTED",
-		3: "ERROR_CODE_BAD_REQUEST",
-		4: "ERROR_CODE_UNAUTHORIZED",
-		5: "ERROR_CODE_PHONE_NOT_RESPONDING",
-		6: "ERROR_CODE_SEND_FAILED",
-		7: "ERROR_CODE_TIMEOUT",
+		0:  "ERROR_CODE_UNSPECIFIED",
+		1:  "ERROR_CODE_INTERNAL",
+		2:  "ERROR_CODE_NOT_CONNECTED",
+		3:  "ERROR_CODE_BAD_REQUEST",
+		4:  "ERROR_CODE_UNAUTHORIZED",
+		5:  "ERROR_CODE_PHONE_NOT_RESPONDING",
+		6:  "ERROR_CODE_SEND_FAILED",
+		7:  "ERROR_CODE_TIMEOUT",
+		8:  "ERROR_CODE_PAIRING_REJECTED",
+		9:  "ERROR_CODE_NO_PHONE",
+		10: "ERROR_CODE_NOT_SIGNED_IN",
 	}
 	ErrorCode_value = map[string]int32{
 		"ERROR_CODE_UNSPECIFIED":          0,
@@ -160,6 +166,9 @@ var (
 		"ERROR_CODE_PHONE_NOT_RESPONDING": 5,
 		"ERROR_CODE_SEND_FAILED":          6,
 		"ERROR_CODE_TIMEOUT":              7,
+		"ERROR_CODE_PAIRING_REJECTED":     8,
+		"ERROR_CODE_NO_PHONE":             9,
+		"ERROR_CODE_NOT_SIGNED_IN":        10,
 	}
 )
 
@@ -603,6 +612,7 @@ type Request struct {
 	//	*Request_MarkRead
 	//	*Request_DownloadMedia
 	//	*Request_GetThumbnails
+	//	*Request_StartGoogleLogin
 	Body          isRequest_Body `protobuf_oneof:"body"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -778,6 +788,15 @@ func (x *Request) GetGetThumbnails() *GetThumbnails {
 	return nil
 }
 
+func (x *Request) GetStartGoogleLogin() *StartGoogleLogin {
+	if x != nil {
+		if x, ok := x.Body.(*Request_StartGoogleLogin); ok {
+			return x.StartGoogleLogin
+		}
+	}
+	return nil
+}
+
 type isRequest_Body interface {
 	isRequest_Body()
 }
@@ -838,6 +857,10 @@ type Request_GetThumbnails struct {
 	GetThumbnails *GetThumbnails `protobuf:"bytes,23,opt,name=get_thumbnails,json=getThumbnails,proto3,oneof"`
 }
 
+type Request_StartGoogleLogin struct {
+	StartGoogleLogin *StartGoogleLogin `protobuf:"bytes,24,opt,name=start_google_login,json=startGoogleLogin,proto3,oneof"` // QR pairing was discontinued by Google
+}
+
 func (*Request_Ping) isRequest_Body() {}
 
 func (*Request_StartPairing) isRequest_Body() {}
@@ -865,6 +888,8 @@ func (*Request_MarkRead) isRequest_Body() {}
 func (*Request_DownloadMedia) isRequest_Body() {}
 
 func (*Request_GetThumbnails) isRequest_Body() {}
+
+func (*Request_StartGoogleLogin) isRequest_Body() {}
 
 type Ping struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2822,6 +2847,7 @@ type Event struct {
 	//	*Event_MessageDeleted
 	//	*Event_SimsUpdated
 	//	*Event_ResyncNeeded
+	//	*Event_PairEmoji
 	Body          isEvent_Body `protobuf_oneof:"body"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2954,6 +2980,15 @@ func (x *Event) GetResyncNeeded() *ResyncNeeded {
 	return nil
 }
 
+func (x *Event) GetPairEmoji() *PairEmoji {
+	if x != nil {
+		if x, ok := x.Body.(*Event_PairEmoji); ok {
+			return x.PairEmoji
+		}
+	}
+	return nil
+}
+
 type isEvent_Body interface {
 	isEvent_Body()
 }
@@ -2998,6 +3033,10 @@ type Event_ResyncNeeded struct {
 	ResyncNeeded *ResyncNeeded `protobuf:"bytes,10,opt,name=resync_needed,json=resyncNeeded,proto3,oneof"`
 }
 
+type Event_PairEmoji struct {
+	PairEmoji *PairEmoji `protobuf:"bytes,11,opt,name=pair_emoji,json=pairEmoji,proto3,oneof"`
+}
+
 func (*Event_Hello) isEvent_Body() {}
 
 func (*Event_SessionUpdated) isEvent_Body() {}
@@ -3017,6 +3056,8 @@ func (*Event_MessageDeleted) isEvent_Body() {}
 func (*Event_SimsUpdated) isEvent_Body() {}
 
 func (*Event_ResyncNeeded) isEvent_Body() {}
+
+func (*Event_PairEmoji) isEvent_Body() {}
 
 type Hello struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
@@ -3490,6 +3531,99 @@ func (*ResyncNeeded) Descriptor() ([]byte, []int) {
 	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{42}
 }
 
+// Google-account ("gaia") pairing. Cookies come from a signed-in messages.google.com session:
+// SID, HSID, SSID, APISID, SAPISID, OSID are required; __Secure-1PSIDTS is optional.
+// The response arrives only when pairing has finished: Ack after PairSuccess was emitted, or
+// RpcError PAIRING_REJECTED / NO_PHONE / NOT_SIGNED_IN / TIMEOUT. PairEmoji events arrive while
+// the user is asked to tap the matching emoji on the phone.
+type StartGoogleLogin struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Cookies       map[string]string      `protobuf:"bytes,1,rep,name=cookies,proto3" json:"cookies,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartGoogleLogin) Reset() {
+	*x = StartGoogleLogin{}
+	mi := &file_ertext_v1_ertext_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartGoogleLogin) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartGoogleLogin) ProtoMessage() {}
+
+func (x *StartGoogleLogin) ProtoReflect() protoreflect.Message {
+	mi := &file_ertext_v1_ertext_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartGoogleLogin.ProtoReflect.Descriptor instead.
+func (*StartGoogleLogin) Descriptor() ([]byte, []int) {
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *StartGoogleLogin) GetCookies() map[string]string {
+	if x != nil {
+		return x.Cookies
+	}
+	return nil
+}
+
+type PairEmoji struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Emoji         string                 `protobuf:"bytes,1,opt,name=emoji,proto3" json:"emoji,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PairEmoji) Reset() {
+	*x = PairEmoji{}
+	mi := &file_ertext_v1_ertext_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PairEmoji) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PairEmoji) ProtoMessage() {}
+
+func (x *PairEmoji) ProtoReflect() protoreflect.Message {
+	mi := &file_ertext_v1_ertext_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PairEmoji.ProtoReflect.Descriptor instead.
+func (*PairEmoji) Descriptor() ([]byte, []int) {
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *PairEmoji) GetEmoji() string {
+	if x != nil {
+		return x.Emoji
+	}
+	return ""
+}
+
 var File_ertext_v1_ertext_proto protoreflect.FileDescriptor
 
 const file_ertext_v1_ertext_proto_rawDesc = "" +
@@ -3499,7 +3633,7 @@ const file_ertext_v1_ertext_proto_rawDesc = "" +
 	"\arequest\x18\x01 \x01(\v2\x12.ertext.v1.RequestH\x00R\arequest\x121\n" +
 	"\bresponse\x18\x02 \x01(\v2\x13.ertext.v1.ResponseH\x00R\bresponse\x12(\n" +
 	"\x05event\x18\x03 \x01(\v2\x10.ertext.v1.EventH\x00R\x05eventB\x06\n" +
-	"\x04kind\"\xe4\x06\n" +
+	"\x04kind\"\xb1\a\n" +
 	"\aRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12%\n" +
 	"\x04ping\x18\n" +
@@ -3519,7 +3653,8 @@ const file_ertext_v1_ertext_proto_rawDesc = "" +
 	"\rsend_reaction\x18\x14 \x01(\v2\x17.ertext.v1.SendReactionH\x00R\fsendReaction\x122\n" +
 	"\tmark_read\x18\x15 \x01(\v2\x13.ertext.v1.MarkReadH\x00R\bmarkRead\x12A\n" +
 	"\x0edownload_media\x18\x16 \x01(\v2\x18.ertext.v1.DownloadMediaH\x00R\rdownloadMedia\x12A\n" +
-	"\x0eget_thumbnails\x18\x17 \x01(\v2\x18.ertext.v1.GetThumbnailsH\x00R\rgetThumbnailsB\x06\n" +
+	"\x0eget_thumbnails\x18\x17 \x01(\v2\x18.ertext.v1.GetThumbnailsH\x00R\rgetThumbnails\x12K\n" +
+	"\x12start_google_login\x18\x18 \x01(\v2\x1b.ertext.v1.StartGoogleLoginH\x00R\x10startGoogleLoginB\x06\n" +
 	"\x04body\"\x06\n" +
 	"\x04Ping\"\x0e\n" +
 	"\fStartPairing\"\x10\n" +
@@ -3669,7 +3804,7 @@ const file_ertext_v1_ertext_proto_rawDesc = "" +
 	"\x0eparticipant_id\x18\x02 \x01(\tR\rparticipantId\x12!\n" +
 	"\fcarrier_name\x18\x03 \x01(\tR\vcarrierName\x12)\n" +
 	"\x10formatted_number\x18\x04 \x01(\tR\x0fformattedNumber\x12\x1b\n" +
-	"\tcolor_hex\x18\x05 \x01(\tR\bcolorHex\"\x97\x05\n" +
+	"\tcolor_hex\x18\x05 \x01(\tR\bcolorHex\"\xce\x05\n" +
 	"\x05Event\x12(\n" +
 	"\x05hello\x18\x01 \x01(\v2\x10.ertext.v1.HelloH\x00R\x05hello\x12D\n" +
 	"\x0fsession_updated\x18\x02 \x01(\v2\x19.ertext.v1.SessionUpdatedH\x00R\x0esessionUpdated\x12G\n" +
@@ -3681,7 +3816,9 @@ const file_ertext_v1_ertext_proto_rawDesc = "" +
 	"\x0fmessage_deleted\x18\b \x01(\v2\x19.ertext.v1.MessageDeletedH\x00R\x0emessageDeleted\x12;\n" +
 	"\fsims_updated\x18\t \x01(\v2\x16.ertext.v1.SimsUpdatedH\x00R\vsimsUpdated\x12>\n" +
 	"\rresync_needed\x18\n" +
-	" \x01(\v2\x17.ertext.v1.ResyncNeededH\x00R\fresyncNeededB\x06\n" +
+	" \x01(\v2\x17.ertext.v1.ResyncNeededH\x00R\fresyncNeeded\x125\n" +
+	"\n" +
+	"pair_emoji\x18\v \x01(\v2\x14.ertext.v1.PairEmojiH\x00R\tpairEmojiB\x06\n" +
 	"\x04body\"\x80\x01\n" +
 	"\x05Hello\x12)\n" +
 	"\x10protocol_version\x18\x01 \x01(\rR\x0fprotocolVersion\x12'\n" +
@@ -3707,7 +3844,14 @@ const file_ertext_v1_ertext_proto_rawDesc = "" +
 	"message_id\x18\x02 \x01(\tR\tmessageId\"5\n" +
 	"\vSimsUpdated\x12&\n" +
 	"\x04sims\x18\x01 \x03(\v2\x12.ertext.v1.SimCardR\x04sims\"\x0e\n" +
-	"\fResyncNeeded*F\n" +
+	"\fResyncNeeded\"\x92\x01\n" +
+	"\x10StartGoogleLogin\x12B\n" +
+	"\acookies\x18\x01 \x03(\v2(.ertext.v1.StartGoogleLogin.CookiesEntryR\acookies\x1a:\n" +
+	"\fCookiesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"!\n" +
+	"\tPairEmoji\x12\x14\n" +
+	"\x05emoji\x18\x01 \x01(\tR\x05emoji*F\n" +
 	"\x06Folder\x12\x16\n" +
 	"\x12FOLDER_UNSPECIFIED\x10\x00\x12\x10\n" +
 	"\fFOLDER_INBOX\x10\x01\x12\x12\n" +
@@ -3716,7 +3860,7 @@ const file_ertext_v1_ertext_proto_rawDesc = "" +
 	"\x1bREACTION_ACTION_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13REACTION_ACTION_ADD\x10\x01\x12\x1a\n" +
 	"\x16REACTION_ACTION_REMOVE\x10\x02\x12\x1a\n" +
-	"\x16REACTION_ACTION_SWITCH\x10\x03*\xf0\x01\n" +
+	"\x16REACTION_ACTION_SWITCH\x10\x03*\xc8\x02\n" +
 	"\tErrorCode\x12\x1a\n" +
 	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13ERROR_CODE_INTERNAL\x10\x01\x12\x1c\n" +
@@ -3725,7 +3869,11 @@ const file_ertext_v1_ertext_proto_rawDesc = "" +
 	"\x17ERROR_CODE_UNAUTHORIZED\x10\x04\x12#\n" +
 	"\x1fERROR_CODE_PHONE_NOT_RESPONDING\x10\x05\x12\x1a\n" +
 	"\x16ERROR_CODE_SEND_FAILED\x10\x06\x12\x16\n" +
-	"\x12ERROR_CODE_TIMEOUT\x10\a*k\n" +
+	"\x12ERROR_CODE_TIMEOUT\x10\a\x12\x1f\n" +
+	"\x1bERROR_CODE_PAIRING_REJECTED\x10\b\x12\x17\n" +
+	"\x13ERROR_CODE_NO_PHONE\x10\t\x12\x1c\n" +
+	"\x18ERROR_CODE_NOT_SIGNED_IN\x10\n" +
+	"*k\n" +
 	"\x10ConversationType\x12!\n" +
 	"\x1dCONVERSATION_TYPE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15CONVERSATION_TYPE_SMS\x10\x01\x12\x19\n" +
@@ -3777,7 +3925,7 @@ func file_ertext_v1_ertext_proto_rawDescGZIP() []byte {
 }
 
 var file_ertext_v1_ertext_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
-var file_ertext_v1_ertext_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
+var file_ertext_v1_ertext_proto_msgTypes = make([]protoimpl.MessageInfo, 46)
 var file_ertext_v1_ertext_proto_goTypes = []any{
 	(Folder)(0),                  // 0: ertext.v1.Folder
 	(ReactionAction)(0),          // 1: ertext.v1.ReactionAction
@@ -3830,6 +3978,9 @@ var file_ertext_v1_ertext_proto_goTypes = []any{
 	(*MessageDeleted)(nil),       // 48: ertext.v1.MessageDeleted
 	(*SimsUpdated)(nil),          // 49: ertext.v1.SimsUpdated
 	(*ResyncNeeded)(nil),         // 50: ertext.v1.ResyncNeeded
+	(*StartGoogleLogin)(nil),     // 51: ertext.v1.StartGoogleLogin
+	(*PairEmoji)(nil),            // 52: ertext.v1.PairEmoji
+	nil,                          // 53: ertext.v1.StartGoogleLogin.CookiesEntry
 }
 var file_ertext_v1_ertext_proto_depIdxs = []int32{
 	9,  // 0: ertext.v1.Envelope.request:type_name -> ertext.v1.Request
@@ -3849,51 +4000,54 @@ var file_ertext_v1_ertext_proto_depIdxs = []int32{
 	23, // 14: ertext.v1.Request.mark_read:type_name -> ertext.v1.MarkRead
 	24, // 15: ertext.v1.Request.download_media:type_name -> ertext.v1.DownloadMedia
 	25, // 16: ertext.v1.Request.get_thumbnails:type_name -> ertext.v1.GetThumbnails
-	0,  // 17: ertext.v1.ListConversations.folder:type_name -> ertext.v1.Folder
-	17, // 18: ertext.v1.ListConversations.cursor:type_name -> ertext.v1.Cursor
-	17, // 19: ertext.v1.FetchMessages.cursor:type_name -> ertext.v1.Cursor
-	20, // 20: ertext.v1.SendMessage.sim:type_name -> ertext.v1.Sim
-	1,  // 21: ertext.v1.SendReaction.action:type_name -> ertext.v1.ReactionAction
-	20, // 22: ertext.v1.SendReaction.sim:type_name -> ertext.v1.Sim
-	27, // 23: ertext.v1.Response.error:type_name -> ertext.v1.RpcError
-	28, // 24: ertext.v1.Response.ack:type_name -> ertext.v1.Ack
-	29, // 25: ertext.v1.Response.pong:type_name -> ertext.v1.Pong
-	30, // 26: ertext.v1.Response.conversation_page:type_name -> ertext.v1.ConversationPage
-	31, // 27: ertext.v1.Response.message_page:type_name -> ertext.v1.MessagePage
-	33, // 28: ertext.v1.Response.thumbnails:type_name -> ertext.v1.Thumbnails
-	2,  // 29: ertext.v1.RpcError.code:type_name -> ertext.v1.ErrorCode
-	35, // 30: ertext.v1.ConversationPage.conversations:type_name -> ertext.v1.Conversation
-	17, // 31: ertext.v1.ConversationPage.next:type_name -> ertext.v1.Cursor
-	38, // 32: ertext.v1.MessagePage.messages:type_name -> ertext.v1.Message
-	17, // 33: ertext.v1.MessagePage.next:type_name -> ertext.v1.Cursor
-	32, // 34: ertext.v1.Thumbnails.thumbnails:type_name -> ertext.v1.Thumbnail
-	3,  // 35: ertext.v1.Conversation.type:type_name -> ertext.v1.ConversationType
-	4,  // 36: ertext.v1.Conversation.status:type_name -> ertext.v1.ConversationStatus
-	34, // 37: ertext.v1.Conversation.participants:type_name -> ertext.v1.Participant
-	5,  // 38: ertext.v1.Message.kind:type_name -> ertext.v1.MessageKind
-	6,  // 39: ertext.v1.Message.status:type_name -> ertext.v1.MessageStatus
-	37, // 40: ertext.v1.Message.media:type_name -> ertext.v1.Media
-	36, // 41: ertext.v1.Message.reactions:type_name -> ertext.v1.Reaction
-	20, // 42: ertext.v1.SimCard.sim:type_name -> ertext.v1.Sim
-	41, // 43: ertext.v1.Event.hello:type_name -> ertext.v1.Hello
-	42, // 44: ertext.v1.Event.session_updated:type_name -> ertext.v1.SessionUpdated
-	43, // 45: ertext.v1.Event.connection_state:type_name -> ertext.v1.ConnectionState
-	44, // 46: ertext.v1.Event.pair_qr:type_name -> ertext.v1.PairQr
-	45, // 47: ertext.v1.Event.pair_success:type_name -> ertext.v1.PairSuccess
-	46, // 48: ertext.v1.Event.conversation_upserted:type_name -> ertext.v1.ConversationUpserted
-	47, // 49: ertext.v1.Event.message_upserted:type_name -> ertext.v1.MessageUpserted
-	48, // 50: ertext.v1.Event.message_deleted:type_name -> ertext.v1.MessageDeleted
-	49, // 51: ertext.v1.Event.sims_updated:type_name -> ertext.v1.SimsUpdated
-	50, // 52: ertext.v1.Event.resync_needed:type_name -> ertext.v1.ResyncNeeded
-	7,  // 53: ertext.v1.ConnectionState.state:type_name -> ertext.v1.ConnState
-	35, // 54: ertext.v1.ConversationUpserted.conversation:type_name -> ertext.v1.Conversation
-	38, // 55: ertext.v1.MessageUpserted.message:type_name -> ertext.v1.Message
-	39, // 56: ertext.v1.SimsUpdated.sims:type_name -> ertext.v1.SimCard
-	57, // [57:57] is the sub-list for method output_type
-	57, // [57:57] is the sub-list for method input_type
-	57, // [57:57] is the sub-list for extension type_name
-	57, // [57:57] is the sub-list for extension extendee
-	0,  // [0:57] is the sub-list for field type_name
+	51, // 17: ertext.v1.Request.start_google_login:type_name -> ertext.v1.StartGoogleLogin
+	0,  // 18: ertext.v1.ListConversations.folder:type_name -> ertext.v1.Folder
+	17, // 19: ertext.v1.ListConversations.cursor:type_name -> ertext.v1.Cursor
+	17, // 20: ertext.v1.FetchMessages.cursor:type_name -> ertext.v1.Cursor
+	20, // 21: ertext.v1.SendMessage.sim:type_name -> ertext.v1.Sim
+	1,  // 22: ertext.v1.SendReaction.action:type_name -> ertext.v1.ReactionAction
+	20, // 23: ertext.v1.SendReaction.sim:type_name -> ertext.v1.Sim
+	27, // 24: ertext.v1.Response.error:type_name -> ertext.v1.RpcError
+	28, // 25: ertext.v1.Response.ack:type_name -> ertext.v1.Ack
+	29, // 26: ertext.v1.Response.pong:type_name -> ertext.v1.Pong
+	30, // 27: ertext.v1.Response.conversation_page:type_name -> ertext.v1.ConversationPage
+	31, // 28: ertext.v1.Response.message_page:type_name -> ertext.v1.MessagePage
+	33, // 29: ertext.v1.Response.thumbnails:type_name -> ertext.v1.Thumbnails
+	2,  // 30: ertext.v1.RpcError.code:type_name -> ertext.v1.ErrorCode
+	35, // 31: ertext.v1.ConversationPage.conversations:type_name -> ertext.v1.Conversation
+	17, // 32: ertext.v1.ConversationPage.next:type_name -> ertext.v1.Cursor
+	38, // 33: ertext.v1.MessagePage.messages:type_name -> ertext.v1.Message
+	17, // 34: ertext.v1.MessagePage.next:type_name -> ertext.v1.Cursor
+	32, // 35: ertext.v1.Thumbnails.thumbnails:type_name -> ertext.v1.Thumbnail
+	3,  // 36: ertext.v1.Conversation.type:type_name -> ertext.v1.ConversationType
+	4,  // 37: ertext.v1.Conversation.status:type_name -> ertext.v1.ConversationStatus
+	34, // 38: ertext.v1.Conversation.participants:type_name -> ertext.v1.Participant
+	5,  // 39: ertext.v1.Message.kind:type_name -> ertext.v1.MessageKind
+	6,  // 40: ertext.v1.Message.status:type_name -> ertext.v1.MessageStatus
+	37, // 41: ertext.v1.Message.media:type_name -> ertext.v1.Media
+	36, // 42: ertext.v1.Message.reactions:type_name -> ertext.v1.Reaction
+	20, // 43: ertext.v1.SimCard.sim:type_name -> ertext.v1.Sim
+	41, // 44: ertext.v1.Event.hello:type_name -> ertext.v1.Hello
+	42, // 45: ertext.v1.Event.session_updated:type_name -> ertext.v1.SessionUpdated
+	43, // 46: ertext.v1.Event.connection_state:type_name -> ertext.v1.ConnectionState
+	44, // 47: ertext.v1.Event.pair_qr:type_name -> ertext.v1.PairQr
+	45, // 48: ertext.v1.Event.pair_success:type_name -> ertext.v1.PairSuccess
+	46, // 49: ertext.v1.Event.conversation_upserted:type_name -> ertext.v1.ConversationUpserted
+	47, // 50: ertext.v1.Event.message_upserted:type_name -> ertext.v1.MessageUpserted
+	48, // 51: ertext.v1.Event.message_deleted:type_name -> ertext.v1.MessageDeleted
+	49, // 52: ertext.v1.Event.sims_updated:type_name -> ertext.v1.SimsUpdated
+	50, // 53: ertext.v1.Event.resync_needed:type_name -> ertext.v1.ResyncNeeded
+	52, // 54: ertext.v1.Event.pair_emoji:type_name -> ertext.v1.PairEmoji
+	7,  // 55: ertext.v1.ConnectionState.state:type_name -> ertext.v1.ConnState
+	35, // 56: ertext.v1.ConversationUpserted.conversation:type_name -> ertext.v1.Conversation
+	38, // 57: ertext.v1.MessageUpserted.message:type_name -> ertext.v1.Message
+	39, // 58: ertext.v1.SimsUpdated.sims:type_name -> ertext.v1.SimCard
+	53, // 59: ertext.v1.StartGoogleLogin.cookies:type_name -> ertext.v1.StartGoogleLogin.CookiesEntry
+	60, // [60:60] is the sub-list for method output_type
+	60, // [60:60] is the sub-list for method input_type
+	60, // [60:60] is the sub-list for extension type_name
+	60, // [60:60] is the sub-list for extension extendee
+	0,  // [0:60] is the sub-list for field type_name
 }
 
 func init() { file_ertext_v1_ertext_proto_init() }
@@ -3921,6 +4075,7 @@ func file_ertext_v1_ertext_proto_init() {
 		(*Request_MarkRead)(nil),
 		(*Request_DownloadMedia)(nil),
 		(*Request_GetThumbnails)(nil),
+		(*Request_StartGoogleLogin)(nil),
 	}
 	file_ertext_v1_ertext_proto_msgTypes[18].OneofWrappers = []any{
 		(*Response_Error)(nil),
@@ -3941,6 +4096,7 @@ func file_ertext_v1_ertext_proto_init() {
 		(*Event_MessageDeleted)(nil),
 		(*Event_SimsUpdated)(nil),
 		(*Event_ResyncNeeded)(nil),
+		(*Event_PairEmoji)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -3948,7 +4104,7 @@ func file_ertext_v1_ertext_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ertext_v1_ertext_proto_rawDesc), len(file_ertext_v1_ertext_proto_rawDesc)),
 			NumEnums:      8,
-			NumMessages:   43,
+			NumMessages:   46,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -1,0 +1,21 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go vet ./...
+      - run: go test -race ./...
+      - run: go tool buf lint
+      - name: generated code is current
+        shell: bash
+        run: |
+          go tool buf generate
+          git diff --exit-code -- internal/pb
+      - run: go build -trimpath -o ertext-sidecar.exe ./cmd/ertext-sidecar

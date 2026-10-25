@@ -89,6 +89,43 @@ func TestMarkRead(t *testing.T) {
 	require.NoError(t, h.close())
 }
 
+func TestArchiveConversation(t *testing.T) {
+	h, f := connected(t)
+	h.send(req(2, &pb.ArchiveConversation{ConversationId: "c1", Archived: true}))
+	require.NotNil(t, h.response(2).GetAck())
+	got := f.gotUpdate()
+	require.Equal(t, "c1", got.GetConversationID())
+	require.Equal(t, gmproto.ConversationActionStatus(4), got.GetAction())
+	require.Equal(t, "c1", got.GetDeleteData().GetConversationID())
+	require.Nil(t, got.GetUpdateData())
+
+	h.send(req(3, &pb.ArchiveConversation{ConversationId: "c1", Archived: false}))
+	require.NotNil(t, h.response(3).GetAck())
+	got = f.gotUpdate()
+	require.Equal(t, gmproto.ConversationActionStatus(3), got.GetAction())
+	require.Equal(t, "c1", got.GetConversationID())
+	require.Equal(t, "c1", got.GetDeleteData().GetConversationID())
+	require.Nil(t, got.GetUpdateData())
+
+	h.send(req(4, &pb.ArchiveConversation{Archived: true}))
+	require.Equal(t, pb.ErrorCode_ERROR_CODE_BAD_REQUEST, h.response(4).GetError().GetCode())
+
+	f.setUpdate(&gmproto.UpdateConversationResponse{Success: false})
+	h.send(req(5, &pb.ArchiveConversation{ConversationId: "c1", Archived: true}))
+	require.Equal(t, pb.ErrorCode_ERROR_CODE_SEND_FAILED, h.response(5).GetError().GetCode())
+	require.NoError(t, h.close())
+}
+
+func TestDeleteConversation(t *testing.T) {
+	h, f := connected(t)
+	h.send(req(2, &pb.DeleteConversation{ConversationId: "c1"}))
+	require.NotNil(t, h.response(2).GetAck())
+	require.Equal(t, [2]string{"c1", ""}, f.gotDelete())
+	h.send(req(3, &pb.DeleteConversation{}))
+	require.Equal(t, pb.ErrorCode_ERROR_CODE_BAD_REQUEST, h.response(3).GetError().GetCode())
+	require.NoError(t, h.close())
+}
+
 func TestRequestFullMedia(t *testing.T) {
 	h, f := connected(t)
 	h.send(req(2, &pb.RequestFullMedia{MessageId: "m9", ActionMessageId: "a1"}))

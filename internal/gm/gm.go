@@ -41,6 +41,8 @@ type Client interface {
 	SendMessage(ctx context.Context, req *gmproto.SendMessageRequest) (*gmproto.SendMessageResponse, error)
 	SendReaction(ctx context.Context, req *gmproto.SendReactionRequest) (*gmproto.SendReactionResponse, error)
 	MarkRead(ctx context.Context, conversationID, messageID string) error
+	UpdateConversation(ctx context.Context, req *gmproto.UpdateConversationRequest) (*gmproto.UpdateConversationResponse, error)
+	DeleteConversation(ctx context.Context, conversationID, phone string) error
 	DownloadMedia(ctx context.Context, mediaID string, key []byte) (io.ReadCloser, error)
 	GetFullSizeImage(ctx context.Context, messageID, actionMessageID string) (*gmproto.GetFullSizeImageResponse, error)
 	GetParticipantThumbnail(ctx context.Context, participantIDs ...string) (*gmproto.GetThumbnailResponse, error)

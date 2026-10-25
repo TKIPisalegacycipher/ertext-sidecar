@@ -38,6 +38,10 @@ func req(id uint64, body any) *pb.Request {
 		r.Body = &pb.Request_SendReaction{SendReaction: b}
 	case *pb.MarkRead:
 		r.Body = &pb.Request_MarkRead{MarkRead: b}
+	case *pb.ArchiveConversation:
+		r.Body = &pb.Request_ArchiveConversation{ArchiveConversation: b}
+	case *pb.DeleteConversation:
+		r.Body = &pb.Request_DeleteConversation{DeleteConversation: b}
 	case *pb.DownloadMedia:
 		r.Body = &pb.Request_DownloadMedia{DownloadMedia: b}
 	case *pb.RequestFullMedia:

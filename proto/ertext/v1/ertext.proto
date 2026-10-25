@@ -36,6 +36,8 @@ message Request {
     GetThumbnails get_thumbnails = 23;
     StartGoogleLogin start_google_login = 24; // QR pairing was discontinued by Google
     RequestFullMedia request_full_media = 25;
+    ArchiveConversation archive_conversation = 26;
+    DeleteConversation delete_conversation = 27;
   }
 }
 
@@ -116,6 +118,18 @@ message DownloadMedia {
 message RequestFullMedia {
   string message_id = 1;
   string action_message_id = 2;
+}
+
+// Moves a conversation to the Archive folder (archived = true) or back to the Inbox. Acks once the
+// phone accepted it. Mirrors Messages for Web's archive action.
+message ArchiveConversation {
+  string conversation_id = 1;
+  bool archived = 2;
+}
+
+// Deletes a conversation (and its messages) on the phone. Acks once the phone accepted it.
+message DeleteConversation {
+  string conversation_id = 1;
 }
 
 message GetThumbnails {

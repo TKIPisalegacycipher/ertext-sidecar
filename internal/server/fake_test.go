@@ -40,24 +40,28 @@ type fakeClient struct {
 	unpairGate  chan struct{}   // if set, Unpair blocks until it is closed
 	panicOn     map[string]bool // record(name) panics for these calls
 
-	listReq   *gmproto.ListConversationsRequest
-	listResp  *gmproto.ListConversationsResponse
-	fetchArgs []any
-	fetchResp *gmproto.ListMessagesResponse
-	sendReq   *gmproto.SendMessageRequest
-	sendResp  *gmproto.SendMessageResponse
-	reactReq  *gmproto.SendReactionRequest
-	reactResp *gmproto.SendReactionResponse
-	readArgs  [2]string
-	fullArgs  [2]string
-	media     []byte
-	thumbIDs  []string
-	thumbs    *gmproto.GetThumbnailResponse
+	listReq    *gmproto.ListConversationsRequest
+	listResp   *gmproto.ListConversationsResponse
+	fetchArgs  []any
+	fetchResp  *gmproto.ListMessagesResponse
+	sendReq    *gmproto.SendMessageRequest
+	sendResp   *gmproto.SendMessageResponse
+	reactReq   *gmproto.SendReactionRequest
+	reactResp  *gmproto.SendReactionResponse
+	readArgs   [2]string
+	updateReq  *gmproto.UpdateConversationRequest
+	updateResp *gmproto.UpdateConversationResponse
+	deleteArgs [2]string
+	fullArgs   [2]string
+	media      []byte
+	thumbIDs   []string
+	thumbs     *gmproto.GetThumbnailResponse
 }
 
 func newFake() *fakeClient {
 	return &fakeClient{blob: []byte(`{"fake":true}`), qr: "https://qr/1", refreshQR: "https://qr/2",
-		err: map[string]error{}, panicOn: map[string]bool{}}
+		err: map[string]error{}, panicOn: map[string]bool{},
+		updateResp: &gmproto.UpdateConversationResponse{Success: true}}
 }
 
 func (f *fakeClient) factory() gm.Factory {
@@ -206,6 +210,34 @@ func (f *fakeClient) MarkRead(_ context.Context, c, m string) error {
 	f.readArgs = [2]string{c, m}
 	f.mu.Unlock()
 	return f.record("markread")
+}
+func (f *fakeClient) UpdateConversation(_ context.Context, r *gmproto.UpdateConversationRequest) (*gmproto.UpdateConversationResponse, error) {
+	f.mu.Lock()
+	f.updateReq = r
+	resp := f.updateResp
+	f.mu.Unlock()
+	return resp, f.record("update")
+}
+func (f *fakeClient) DeleteConversation(_ context.Context, c, phone string) error {
+	f.mu.Lock()
+	f.deleteArgs = [2]string{c, phone}
+	f.mu.Unlock()
+	return f.record("delete")
+}
+func (f *fakeClient) setUpdate(r *gmproto.UpdateConversationResponse) {
+	f.mu.Lock()
+	f.updateResp = r
+	f.mu.Unlock()
+}
+func (f *fakeClient) gotUpdate() *gmproto.UpdateConversationRequest {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.updateReq
+}
+func (f *fakeClient) gotDelete() [2]string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.deleteArgs
 }
 func (f *fakeClient) GetFullSizeImage(_ context.Context, m, a string) (*gmproto.GetFullSizeImageResponse, error) {
 	f.mu.Lock()

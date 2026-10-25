@@ -49,6 +49,10 @@ func (s *Server) handle(req *pb.Request) *pb.Response {
 		return s.sendReaction(b.SendReaction)
 	case *pb.Request_MarkRead:
 		return s.markRead(b.MarkRead)
+	case *pb.Request_ArchiveConversation:
+		return s.archiveConversation(b.ArchiveConversation)
+	case *pb.Request_DeleteConversation:
+		return s.deleteConversation(b.DeleteConversation)
 	case *pb.Request_DownloadMedia:
 		return s.downloadMedia(b.DownloadMedia)
 	case *pb.Request_RequestFullMedia:
@@ -369,6 +373,46 @@ func (s *Server) markRead(r *pb.MarkRead) *pb.Response {
 	}
 	return s.withClient(requestTimeout, func(ctx context.Context, c gm.Client) *pb.Response {
 		return ackOr(c.MarkRead(ctx, r.GetConversationId(), r.GetMessageId()))
+	})
+}
+
+// archiveConversation moves a conversation between the phone's Inbox and Archive folders. libgm
+// has no archive action, so this is the status-update shape (UpdateData.Status), which is not
+// verified against a real phone: a rejected update comes back as SEND_FAILED.
+func (s *Server) archiveConversation(r *pb.ArchiveConversation) *pb.Response {
+	if r.GetConversationId() == "" {
+		return errResp(badRequest("conversation_id required"))
+	}
+	status := gmproto.ConversationStatus_ARCHIVED
+	if !r.GetArchived() {
+		status = gmproto.ConversationStatus_ACTIVE
+	}
+	return s.withClient(requestTimeout, func(ctx context.Context, c gm.Client) *pb.Response {
+		resp, err := c.UpdateConversation(ctx, &gmproto.UpdateConversationRequest{
+			ConversationID: r.GetConversationId(),
+			Data: &gmproto.UpdateConversationRequest_UpdateData{UpdateData: &gmproto.UpdateConversationData{
+				ConversationID: r.GetConversationId(),
+				Data:           &gmproto.UpdateConversationData_Status{Status: status},
+			}},
+		})
+		if err != nil {
+			return errResp(err)
+		}
+		if !resp.GetSuccess() {
+			return errResp(fmt.Errorf("%w: archive rejected", errSendFailed))
+		}
+		return ack()
+	})
+}
+
+// deleteConversation deletes a conversation on the phone. The phone number is left empty (libgm
+// then omits it), as mautrix-gmessages does when it can't find one.
+func (s *Server) deleteConversation(r *pb.DeleteConversation) *pb.Response {
+	if r.GetConversationId() == "" {
+		return errResp(badRequest("conversation_id required"))
+	}
+	return s.withClient(requestTimeout, func(ctx context.Context, c gm.Client) *pb.Response {
+		return ackOr(c.DeleteConversation(ctx, r.GetConversationId(), ""))
 	})
 }
 

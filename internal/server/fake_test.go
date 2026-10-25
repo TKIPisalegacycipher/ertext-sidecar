@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"sync"
 	"testing"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/TKIPisalegacycipher/ertext-sidecar/internal/frame"
 	"github.com/TKIPisalegacycipher/ertext-sidecar/internal/gm"
+	"github.com/TKIPisalegacycipher/ertext-sidecar/internal/gmext"
 	"github.com/TKIPisalegacycipher/ertext-sidecar/internal/pb"
 )
 
@@ -56,6 +58,14 @@ type fakeClient struct {
 	media      []byte
 	thumbIDs   []string
 	thumbs     *gmproto.GetThumbnailResponse
+
+	createReqs  []*gmproto.GetOrCreateConversationRequest
+	createResps []*gmproto.GetOrCreateConversationResponse // answered in order; the last one repeats
+	contacts    *gmproto.ListContactsResponse
+	topContacts *gmproto.ListTopContactsResponse
+
+	rcsReqs []*gmext.GetContactRcsGroupStatusRequest
+	rcs     map[string]*gmext.GetContactRcsGroupStatusResponse // by number; missing: an error
 }
 
 func newFake() *fakeClient {
@@ -210,6 +220,70 @@ func (f *fakeClient) MarkRead(_ context.Context, c, m string) error {
 	f.readArgs = [2]string{c, m}
 	f.mu.Unlock()
 	return f.record("markread")
+}
+func (f *fakeClient) GetOrCreateConversation(_ context.Context, r *gmproto.GetOrCreateConversationRequest) (*gmproto.GetOrCreateConversationResponse, error) {
+	f.mu.Lock()
+	// A copy: the handler changes the request before asking again.
+	f.createReqs = append(f.createReqs, proto.Clone(r).(*gmproto.GetOrCreateConversationRequest))
+	var resp *gmproto.GetOrCreateConversationResponse
+	if n := len(f.createResps); n > 0 {
+		resp = f.createResps[0]
+		if n > 1 {
+			f.createResps = f.createResps[1:]
+		}
+	}
+	f.mu.Unlock()
+	return resp, f.record("create")
+}
+func (f *fakeClient) ListContacts(context.Context) (*gmproto.ListContactsResponse, error) {
+	f.mu.Lock()
+	resp := f.contacts
+	f.mu.Unlock()
+	return resp, f.record("contacts")
+}
+func (f *fakeClient) ListTopContacts(context.Context) (*gmproto.ListTopContactsResponse, error) {
+	f.mu.Lock()
+	resp := f.topContacts
+	f.mu.Unlock()
+	return resp, f.record("topcontacts")
+}
+func (f *fakeClient) GetContactRCSGroupStatus(_ context.Context, r *gmext.GetContactRcsGroupStatusRequest) (*gmext.GetContactRcsGroupStatusResponse, error) {
+	f.mu.Lock()
+	f.rcsReqs = append(f.rcsReqs, r)
+	resp, ok := f.rcs[r.GetNumber().GetNumber()]
+	f.mu.Unlock()
+	if err := f.record("rcs"); err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, errors.New("no answer")
+	}
+	return resp, nil
+}
+func (f *fakeClient) setRCS(m map[string]*gmext.GetContactRcsGroupStatusResponse) {
+	f.mu.Lock()
+	f.rcs = m
+	f.mu.Unlock()
+}
+func (f *fakeClient) gotRCS() []*gmext.GetContactRcsGroupStatusRequest {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]*gmext.GetContactRcsGroupStatusRequest(nil), f.rcsReqs...)
+}
+func (f *fakeClient) setCreate(rs ...*gmproto.GetOrCreateConversationResponse) {
+	f.mu.Lock()
+	f.createResps = rs
+	f.mu.Unlock()
+}
+func (f *fakeClient) gotCreate() []*gmproto.GetOrCreateConversationRequest {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]*gmproto.GetOrCreateConversationRequest(nil), f.createReqs...)
+}
+func (f *fakeClient) setContacts(all *gmproto.ListContactsResponse, top *gmproto.ListTopContactsResponse) {
+	f.mu.Lock()
+	f.contacts, f.topContacts = all, top
+	f.mu.Unlock()
 }
 func (f *fakeClient) UpdateConversation(_ context.Context, r *gmproto.UpdateConversationRequest) (*gmproto.UpdateConversationResponse, error) {
 	f.mu.Lock()

@@ -1,0 +1,40 @@
+// SPDX-License-Identifier: MIT
+// Messages for Web's GET_CONTACT_RCS_GROUP_STATUS (ActionType 26), which libgm doesn't define.
+// Reverse-engineered from the web client's static JavaScript: field numbers exact, names ours (see
+// Ertext's .superpowers/research/2026-10-24-archive-request.md). Not verified against a real
+// phone. This is the phone's wire format, not Ertext's protocol: ertext-proto doesn't compile it.
+syntax = "proto3";
+
+package gmext.v1;
+
+option go_package = "github.com/TKIPisalegacycipher/ertext-sidecar/internal/gmext";
+
+// libgm's conversations.ContactNumber, field for field.
+message ContactNumber {
+  int32 type = 1; // 7 = typed by the user (the web's default); libgm sends 2 for a contact
+  string number = 2;
+  string alt_number = 3; // libgm's number2: the same number again
+  optional string formatted_number = 4;
+}
+
+// libgm's settings.SIMPayload.
+message SimPayload {
+  int32 kind = 1;
+  int32 sim_number = 2;
+}
+
+// The web's conversation reference (libgm's DeleteConversationData shape).
+message ConversationRef {
+  string conversation_id = 1;
+}
+
+message GetContactRcsGroupStatusRequest {
+  ContactNumber number = 1;
+  SimPayload sim = 2; // omitted: no SIM chosen
+  ConversationRef conversation = 3; // omitted: a conversation that doesn't exist yet
+}
+
+message GetContactRcsGroupStatusResponse {
+  bool rcs_group_capable = 1; // false: the web offers "Create a new group?"
+  bool group_encryption_capable = 2; // field 1 && !field 2: "Group end-to-end encryption isn't available"
+}

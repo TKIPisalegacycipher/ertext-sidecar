@@ -1742,8 +1742,7 @@ func (x *RequestFullMedia) GetActionMessageId() string {
 }
 
 // Moves a conversation to the Archive folder (archived = true) or back to the Inbox. Acks once the
-// phone accepted it; unverified against a real phone (libgm has no archive action, only a status
-// update).
+// phone accepted it. Mirrors Messages for Web's archive action.
 type ArchiveConversation struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	ConversationId string                 `protobuf:"bytes,1,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`

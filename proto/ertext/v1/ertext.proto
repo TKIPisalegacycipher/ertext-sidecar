@@ -121,8 +121,7 @@ message RequestFullMedia {
 }
 
 // Moves a conversation to the Archive folder (archived = true) or back to the Inbox. Acks once the
-// phone accepted it; unverified against a real phone (libgm has no archive action, only a status
-// update).
+// phone accepted it. Mirrors Messages for Web's archive action.
 message ArchiveConversation {
   string conversation_id = 1;
   bool archived = 2;

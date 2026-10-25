@@ -376,23 +376,30 @@ func (s *Server) markRead(r *pb.MarkRead) *pb.Response {
 	})
 }
 
-// archiveConversation moves a conversation between the phone's Inbox and Archive folders. libgm
-// has no archive action, so this is the status-update shape (UpdateData.Status), which is not
-// verified against a real phone: a rejected update comes back as SEND_FAILED.
+// libgm doesn't name these ConversationActionStatus values; they come from Messages for Web's
+// archive and unarchive actions.
+const (
+	actionUnarchive gmproto.ConversationActionStatus = 3
+	actionArchive   gmproto.ConversationActionStatus = 4
+)
+
+// archiveConversation moves a conversation between the phone's Inbox and Archive folders, the way
+// Messages for Web does: an archive/unarchive Action plus the conversation reference in field 6
+// (libgm's misnamed DeleteData). A rejected update comes back as SEND_FAILED.
 func (s *Server) archiveConversation(r *pb.ArchiveConversation) *pb.Response {
 	if r.GetConversationId() == "" {
 		return errResp(badRequest("conversation_id required"))
 	}
-	status := gmproto.ConversationStatus_ARCHIVED
+	action := actionArchive
 	if !r.GetArchived() {
-		status = gmproto.ConversationStatus_ACTIVE
+		action = actionUnarchive
 	}
 	return s.withClient(requestTimeout, func(ctx context.Context, c gm.Client) *pb.Response {
 		resp, err := c.UpdateConversation(ctx, &gmproto.UpdateConversationRequest{
+			Action:         action,
 			ConversationID: r.GetConversationId(),
-			Data: &gmproto.UpdateConversationRequest_UpdateData{UpdateData: &gmproto.UpdateConversationData{
+			Data: &gmproto.UpdateConversationRequest_DeleteData{DeleteData: &gmproto.DeleteConversationData{
 				ConversationID: r.GetConversationId(),
-				Data:           &gmproto.UpdateConversationData_Status{Status: status},
 			}},
 		})
 		if err != nil {

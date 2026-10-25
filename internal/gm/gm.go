@@ -16,6 +16,8 @@ import (
 	"go.mau.fi/mautrix-gmessages/pkg/libgm"
 	"go.mau.fi/mautrix-gmessages/pkg/libgm/gmproto"
 	"go.mau.fi/mautrix-gmessages/pkg/libgm/util"
+
+	"github.com/TKIPisalegacycipher/ertext-sidecar/internal/gmext"
 )
 
 const libgmModule = "go.mau.fi/mautrix-gmessages"
@@ -46,6 +48,8 @@ type Client interface {
 	GetOrCreateConversation(ctx context.Context, req *gmproto.GetOrCreateConversationRequest) (*gmproto.GetOrCreateConversationResponse, error)
 	ListContacts(ctx context.Context) (*gmproto.ListContactsResponse, error)
 	ListTopContacts(ctx context.Context) (*gmproto.ListTopContactsResponse, error)
+	// GetContactRCSGroupStatus is ActionType 26, sent through libgm's internals (rcs.go).
+	GetContactRCSGroupStatus(ctx context.Context, req *gmext.GetContactRcsGroupStatusRequest) (*gmext.GetContactRcsGroupStatusResponse, error)
 	DownloadMedia(ctx context.Context, mediaID string, key []byte) (io.ReadCloser, error)
 	GetFullSizeImage(ctx context.Context, messageID, actionMessageID string) (*gmproto.GetFullSizeImageResponse, error)
 	GetParticipantThumbnail(ctx context.Context, participantIDs ...string) (*gmproto.GetThumbnailResponse, error)

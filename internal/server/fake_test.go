@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"sync"
 	"testing"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/TKIPisalegacycipher/ertext-sidecar/internal/frame"
 	"github.com/TKIPisalegacycipher/ertext-sidecar/internal/gm"
+	"github.com/TKIPisalegacycipher/ertext-sidecar/internal/gmext"
 	"github.com/TKIPisalegacycipher/ertext-sidecar/internal/pb"
 )
 
@@ -61,6 +63,9 @@ type fakeClient struct {
 	createResps []*gmproto.GetOrCreateConversationResponse // answered in order; the last one repeats
 	contacts    *gmproto.ListContactsResponse
 	topContacts *gmproto.ListTopContactsResponse
+
+	rcsReqs []*gmext.GetContactRcsGroupStatusRequest
+	rcs     map[string]*gmext.GetContactRcsGroupStatusResponse // by number; missing: an error
 }
 
 func newFake() *fakeClient {
@@ -241,6 +246,29 @@ func (f *fakeClient) ListTopContacts(context.Context) (*gmproto.ListTopContactsR
 	resp := f.topContacts
 	f.mu.Unlock()
 	return resp, f.record("topcontacts")
+}
+func (f *fakeClient) GetContactRCSGroupStatus(_ context.Context, r *gmext.GetContactRcsGroupStatusRequest) (*gmext.GetContactRcsGroupStatusResponse, error) {
+	f.mu.Lock()
+	f.rcsReqs = append(f.rcsReqs, r)
+	resp, ok := f.rcs[r.GetNumber().GetNumber()]
+	f.mu.Unlock()
+	if err := f.record("rcs"); err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, errors.New("no answer")
+	}
+	return resp, nil
+}
+func (f *fakeClient) setRCS(m map[string]*gmext.GetContactRcsGroupStatusResponse) {
+	f.mu.Lock()
+	f.rcs = m
+	f.mu.Unlock()
+}
+func (f *fakeClient) gotRCS() []*gmext.GetContactRcsGroupStatusRequest {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]*gmext.GetContactRcsGroupStatusRequest(nil), f.rcsReqs...)
 }
 func (f *fakeClient) setCreate(rs ...*gmproto.GetOrCreateConversationResponse) {
 	f.mu.Lock()

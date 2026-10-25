@@ -40,6 +40,7 @@ message Request {
     DeleteConversation delete_conversation = 27;
     GetOrCreateConversation get_or_create_conversation = 28;
     ListContacts list_contacts = 29;
+    CheckRcs check_rcs = 30;
   }
 }
 
@@ -149,6 +150,13 @@ message ListContacts {
   bool top = 1;
 }
 
+// Asks the phone, for each number, whether it can be in an RCS group (Messages for Web's
+// GET_CONTACT_RCS_GROUP_STATUS, ActionType 26). Read-only. Reverse-engineered and unverified on a
+// real phone. Answers RcsStatus within about 10 s.
+message CheckRcs {
+  repeated string numbers = 1; // 1 to 20, as GetOrCreateConversation's
+}
+
 message GetThumbnails {
   repeated string participant_ids = 1;
 }
@@ -166,6 +174,7 @@ message Response {
     Thumbnails thumbnails = 14;
     ConversationCreated conversation_created = 15;
     Contacts contacts = 16;
+    RcsStatus rcs_status = 17;
   }
 }
 
@@ -225,6 +234,16 @@ message Contact {
 
 message Contacts {
   repeated Contact contacts = 1; // only contacts with a number, in the phone's order
+}
+
+message RcsCapability {
+  bool checked = 1; // false: the phone didn't answer for this number
+  bool rcs_group = 2; // can be in an RCS group (the phone's field 1)
+  bool encrypted_group = 3; // group end-to-end encryption is available (field 2)
+}
+
+message RcsStatus {
+  repeated RcsCapability results = 1; // one per CheckRcs number, in order
 }
 
 // ---------- domain types ----------

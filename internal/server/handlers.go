@@ -57,6 +57,8 @@ func (s *Server) handle(req *pb.Request) *pb.Response {
 		return s.getOrCreateConversation(b.GetOrCreateConversation)
 	case *pb.Request_ListContacts:
 		return s.listContacts(b.ListContacts)
+	case *pb.Request_CheckRcs:
+		return s.checkRcs(b.CheckRcs)
 	case *pb.Request_DownloadMedia:
 		return s.downloadMedia(b.DownloadMedia)
 	case *pb.Request_RequestFullMedia:

@@ -53,6 +53,10 @@ func (s *Server) handle(req *pb.Request) *pb.Response {
 		return s.archiveConversation(b.ArchiveConversation)
 	case *pb.Request_DeleteConversation:
 		return s.deleteConversation(b.DeleteConversation)
+	case *pb.Request_GetOrCreateConversation:
+		return s.getOrCreateConversation(b.GetOrCreateConversation)
+	case *pb.Request_ListContacts:
+		return s.listContacts(b.ListContacts)
 	case *pb.Request_DownloadMedia:
 		return s.downloadMedia(b.DownloadMedia)
 	case *pb.Request_RequestFullMedia:

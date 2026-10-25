@@ -58,3 +58,21 @@ func ConversationPage(resp *gmproto.ListConversationsResponse) *pb.ConversationP
 	}
 	return page
 }
+
+// Contacts keeps the phone's contacts that have a number, in the phone's order.
+func Contacts(cs []*gmproto.Contact) *pb.Contacts {
+	out := &pb.Contacts{}
+	for _, c := range cs {
+		n := c.GetNumber()
+		if n.GetNumber() == "" {
+			continue
+		}
+		out.Contacts = append(out.Contacts, &pb.Contact{
+			ContactId:       c.GetContactID(),
+			Name:            c.GetName(),
+			Number:          n.GetNumber(),
+			FormattedNumber: n.GetFormattedNumber(),
+		})
+	}
+	return out
+}

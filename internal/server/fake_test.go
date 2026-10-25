@@ -56,6 +56,11 @@ type fakeClient struct {
 	media      []byte
 	thumbIDs   []string
 	thumbs     *gmproto.GetThumbnailResponse
+
+	createReqs  []*gmproto.GetOrCreateConversationRequest
+	createResps []*gmproto.GetOrCreateConversationResponse // answered in order; the last one repeats
+	contacts    *gmproto.ListContactsResponse
+	topContacts *gmproto.ListTopContactsResponse
 }
 
 func newFake() *fakeClient {
@@ -210,6 +215,47 @@ func (f *fakeClient) MarkRead(_ context.Context, c, m string) error {
 	f.readArgs = [2]string{c, m}
 	f.mu.Unlock()
 	return f.record("markread")
+}
+func (f *fakeClient) GetOrCreateConversation(_ context.Context, r *gmproto.GetOrCreateConversationRequest) (*gmproto.GetOrCreateConversationResponse, error) {
+	f.mu.Lock()
+	// A copy: the handler changes the request before asking again.
+	f.createReqs = append(f.createReqs, proto.Clone(r).(*gmproto.GetOrCreateConversationRequest))
+	var resp *gmproto.GetOrCreateConversationResponse
+	if n := len(f.createResps); n > 0 {
+		resp = f.createResps[0]
+		if n > 1 {
+			f.createResps = f.createResps[1:]
+		}
+	}
+	f.mu.Unlock()
+	return resp, f.record("create")
+}
+func (f *fakeClient) ListContacts(context.Context) (*gmproto.ListContactsResponse, error) {
+	f.mu.Lock()
+	resp := f.contacts
+	f.mu.Unlock()
+	return resp, f.record("contacts")
+}
+func (f *fakeClient) ListTopContacts(context.Context) (*gmproto.ListTopContactsResponse, error) {
+	f.mu.Lock()
+	resp := f.topContacts
+	f.mu.Unlock()
+	return resp, f.record("topcontacts")
+}
+func (f *fakeClient) setCreate(rs ...*gmproto.GetOrCreateConversationResponse) {
+	f.mu.Lock()
+	f.createResps = rs
+	f.mu.Unlock()
+}
+func (f *fakeClient) gotCreate() []*gmproto.GetOrCreateConversationRequest {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]*gmproto.GetOrCreateConversationRequest(nil), f.createReqs...)
+}
+func (f *fakeClient) setContacts(all *gmproto.ListContactsResponse, top *gmproto.ListTopContactsResponse) {
+	f.mu.Lock()
+	f.contacts, f.topContacts = all, top
+	f.mu.Unlock()
 }
 func (f *fakeClient) UpdateConversation(_ context.Context, r *gmproto.UpdateConversationRequest) (*gmproto.UpdateConversationResponse, error) {
 	f.mu.Lock()

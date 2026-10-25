@@ -38,6 +38,8 @@ message Request {
     RequestFullMedia request_full_media = 25;
     ArchiveConversation archive_conversation = 26;
     DeleteConversation delete_conversation = 27;
+    GetOrCreateConversation get_or_create_conversation = 28;
+    ListContacts list_contacts = 29;
   }
 }
 
@@ -132,6 +134,21 @@ message DeleteConversation {
   string conversation_id = 1;
 }
 
+// Finds or creates the conversation with these numbers on the phone: one number is a 1:1, more
+// make a group. The phone decides RCS or SMS/MMS. With allow_rcs_group, a group the phone offers
+// to make as RCS (libgm's CREATE_RCS status) is created as RCS. Answers ConversationCreated, or
+// BAD_REQUEST (no number, a blank one, more than 20) or SEND_FAILED (no conversation came back).
+message GetOrCreateConversation {
+  repeated string numbers = 1;
+  bool allow_rcs_group = 2;
+}
+
+// The phone's contacts: all of them (libgm asks for up to 350) or, with top, its few
+// most-contacted. Answers Contacts.
+message ListContacts {
+  bool top = 1;
+}
+
 message GetThumbnails {
   repeated string participant_ids = 1;
 }
@@ -147,6 +164,8 @@ message Response {
     ConversationPage conversation_page = 12;
     MessagePage message_page = 13;
     Thumbnails thumbnails = 14;
+    ConversationCreated conversation_created = 15;
+    Contacts contacts = 16;
   }
 }
 
@@ -190,6 +209,22 @@ message Thumbnail {
 
 message Thumbnails {
   repeated Thumbnail thumbnails = 1;
+}
+
+message ConversationCreated {
+  Conversation conversation = 1;
+}
+
+// One of the phone's contacts. Names and numbers: never log them.
+message Contact {
+  string contact_id = 1;
+  string name = 2;
+  string number = 3;
+  string formatted_number = 4;
+}
+
+message Contacts {
+  repeated Contact contacts = 1; // only contacts with a number, in the phone's order
 }
 
 // ---------- domain types ----------

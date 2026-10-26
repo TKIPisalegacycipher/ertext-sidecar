@@ -72,6 +72,7 @@ func Contacts(cs []*gmproto.Contact) *pb.Contacts {
 			Name:            c.GetName(),
 			Number:          n.GetNumber(),
 			FormattedNumber: n.GetFormattedNumber(),
+			ParticipantId:   c.GetParticipantID(),
 		})
 	}
 	return out

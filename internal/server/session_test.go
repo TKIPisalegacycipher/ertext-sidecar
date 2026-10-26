@@ -54,6 +54,8 @@ func req(id uint64, body any) *pb.Request {
 		r.Body = &pb.Request_RequestFullMedia{RequestFullMedia: b}
 	case *pb.GetThumbnails:
 		r.Body = &pb.Request_GetThumbnails{GetThumbnails: b}
+	case *pb.GetContactThumbnails:
+		r.Body = &pb.Request_GetContactThumbnails{GetContactThumbnails: b}
 	default:
 		panic(fmt.Sprintf("req: unhandled %T", body))
 	}

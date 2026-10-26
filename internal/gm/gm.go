@@ -53,6 +53,7 @@ type Client interface {
 	DownloadMedia(ctx context.Context, mediaID string, key []byte) (io.ReadCloser, error)
 	GetFullSizeImage(ctx context.Context, messageID, actionMessageID string) (*gmproto.GetFullSizeImageResponse, error)
 	GetParticipantThumbnail(ctx context.Context, participantIDs ...string) (*gmproto.GetThumbnailResponse, error)
+	GetContactThumbnail(ctx context.Context, contactIDs ...string) (*gmproto.GetThumbnailResponse, error)
 }
 
 // Factory builds a client from a session blob (libgm AuthData JSON), or from fresh pairing keys

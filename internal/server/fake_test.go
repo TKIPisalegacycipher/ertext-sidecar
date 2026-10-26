@@ -58,6 +58,8 @@ type fakeClient struct {
 	media      []byte
 	thumbIDs   []string
 	thumbs     *gmproto.GetThumbnailResponse
+	cthumbIDs  []string
+	cthumbs    *gmproto.GetThumbnailResponse
 
 	createReqs  []*gmproto.GetOrCreateConversationRequest
 	createResps []*gmproto.GetOrCreateConversationResponse // answered in order; the last one repeats
@@ -331,6 +333,23 @@ func (f *fakeClient) GetParticipantThumbnail(_ context.Context, ids ...string) (
 	resp := f.thumbs
 	f.mu.Unlock()
 	return resp, f.record("thumbs")
+}
+func (f *fakeClient) GetContactThumbnail(_ context.Context, ids ...string) (*gmproto.GetThumbnailResponse, error) {
+	f.mu.Lock()
+	f.cthumbIDs = ids
+	resp := f.cthumbs
+	f.mu.Unlock()
+	return resp, f.record("contactthumbs")
+}
+func (f *fakeClient) setContactThumbs(r *gmproto.GetThumbnailResponse) {
+	f.mu.Lock()
+	f.cthumbs = r
+	f.mu.Unlock()
+}
+func (f *fakeClient) gotContactThumbIDs() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]string(nil), f.cthumbIDs...)
 }
 
 type harness struct {

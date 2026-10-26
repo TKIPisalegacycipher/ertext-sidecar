@@ -619,6 +619,7 @@ type Request struct {
 	//	*Request_GetOrCreateConversation
 	//	*Request_ListContacts
 	//	*Request_CheckRcs
+	//	*Request_GetContactThumbnails
 	Body          isRequest_Body `protobuf_oneof:"body"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -857,6 +858,15 @@ func (x *Request) GetCheckRcs() *CheckRcs {
 	return nil
 }
 
+func (x *Request) GetGetContactThumbnails() *GetContactThumbnails {
+	if x != nil {
+		if x, ok := x.Body.(*Request_GetContactThumbnails); ok {
+			return x.GetContactThumbnails
+		}
+	}
+	return nil
+}
+
 type isRequest_Body interface {
 	isRequest_Body()
 }
@@ -945,6 +955,10 @@ type Request_CheckRcs struct {
 	CheckRcs *CheckRcs `protobuf:"bytes,30,opt,name=check_rcs,json=checkRcs,proto3,oneof"`
 }
 
+type Request_GetContactThumbnails struct {
+	GetContactThumbnails *GetContactThumbnails `protobuf:"bytes,31,opt,name=get_contact_thumbnails,json=getContactThumbnails,proto3,oneof"`
+}
+
 func (*Request_Ping) isRequest_Body() {}
 
 func (*Request_StartPairing) isRequest_Body() {}
@@ -986,6 +1000,8 @@ func (*Request_GetOrCreateConversation) isRequest_Body() {}
 func (*Request_ListContacts) isRequest_Body() {}
 
 func (*Request_CheckRcs) isRequest_Body() {}
+
+func (*Request_GetContactThumbnails) isRequest_Body() {}
 
 type Ping struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2081,6 +2097,53 @@ func (x *GetThumbnails) GetParticipantIds() []string {
 	return nil
 }
 
+// The phone's contact photos, by Contact.contact_id (libgm's GetContactThumbnail, ActionType
+// GET_CONTACTS_THUMBNAIL). Answers Thumbnails whose participant_id holds the contact id; a contact
+// without a photo is missing or has an empty image.
+type GetContactThumbnails struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ContactIds    []string               `protobuf:"bytes,1,rep,name=contact_ids,json=contactIds,proto3" json:"contact_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetContactThumbnails) Reset() {
+	*x = GetContactThumbnails{}
+	mi := &file_ertext_v1_ertext_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetContactThumbnails) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetContactThumbnails) ProtoMessage() {}
+
+func (x *GetContactThumbnails) ProtoReflect() protoreflect.Message {
+	mi := &file_ertext_v1_ertext_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetContactThumbnails.ProtoReflect.Descriptor instead.
+func (*GetContactThumbnails) Descriptor() ([]byte, []int) {
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *GetContactThumbnails) GetContactIds() []string {
+	if x != nil {
+		return x.ContactIds
+	}
+	return nil
+}
+
 type Response struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    uint64                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -2102,7 +2165,7 @@ type Response struct {
 
 func (x *Response) Reset() {
 	*x = Response{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[24]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2114,7 +2177,7 @@ func (x *Response) String() string {
 func (*Response) ProtoMessage() {}
 
 func (x *Response) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[24]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2127,7 +2190,7 @@ func (x *Response) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Response.ProtoReflect.Descriptor instead.
 func (*Response) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{24}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *Response) GetId() uint64 {
@@ -2293,7 +2356,7 @@ type RpcError struct {
 
 func (x *RpcError) Reset() {
 	*x = RpcError{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[25]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2305,7 +2368,7 @@ func (x *RpcError) String() string {
 func (*RpcError) ProtoMessage() {}
 
 func (x *RpcError) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[25]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2318,7 +2381,7 @@ func (x *RpcError) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RpcError.ProtoReflect.Descriptor instead.
 func (*RpcError) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{25}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *RpcError) GetCode() ErrorCode {
@@ -2343,7 +2406,7 @@ type Ack struct {
 
 func (x *Ack) Reset() {
 	*x = Ack{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[26]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2355,7 +2418,7 @@ func (x *Ack) String() string {
 func (*Ack) ProtoMessage() {}
 
 func (x *Ack) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[26]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2368,7 +2431,7 @@ func (x *Ack) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Ack.ProtoReflect.Descriptor instead.
 func (*Ack) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{26}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{27}
 }
 
 type Pong struct {
@@ -2379,7 +2442,7 @@ type Pong struct {
 
 func (x *Pong) Reset() {
 	*x = Pong{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[27]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2391,7 +2454,7 @@ func (x *Pong) String() string {
 func (*Pong) ProtoMessage() {}
 
 func (x *Pong) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[27]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2404,7 +2467,7 @@ func (x *Pong) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Pong.ProtoReflect.Descriptor instead.
 func (*Pong) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{27}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{28}
 }
 
 type ConversationPage struct {
@@ -2417,7 +2480,7 @@ type ConversationPage struct {
 
 func (x *ConversationPage) Reset() {
 	*x = ConversationPage{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[28]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2429,7 +2492,7 @@ func (x *ConversationPage) String() string {
 func (*ConversationPage) ProtoMessage() {}
 
 func (x *ConversationPage) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[28]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2442,7 +2505,7 @@ func (x *ConversationPage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConversationPage.ProtoReflect.Descriptor instead.
 func (*ConversationPage) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{28}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ConversationPage) GetConversations() []*Conversation {
@@ -2470,7 +2533,7 @@ type MessagePage struct {
 
 func (x *MessagePage) Reset() {
 	*x = MessagePage{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[29]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2482,7 +2545,7 @@ func (x *MessagePage) String() string {
 func (*MessagePage) ProtoMessage() {}
 
 func (x *MessagePage) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[29]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2495,7 +2558,7 @@ func (x *MessagePage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessagePage.ProtoReflect.Descriptor instead.
 func (*MessagePage) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{29}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *MessagePage) GetMessages() []*Message {
@@ -2521,7 +2584,7 @@ func (x *MessagePage) GetTotalMessages() int64 {
 
 type Thumbnail struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ParticipantId string                 `protobuf:"bytes,1,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"`
+	ParticipantId string                 `protobuf:"bytes,1,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"` // the contact id when answering GetContactThumbnails
 	Image         []byte                 `protobuf:"bytes,2,opt,name=image,proto3" json:"image,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2529,7 +2592,7 @@ type Thumbnail struct {
 
 func (x *Thumbnail) Reset() {
 	*x = Thumbnail{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[30]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2541,7 +2604,7 @@ func (x *Thumbnail) String() string {
 func (*Thumbnail) ProtoMessage() {}
 
 func (x *Thumbnail) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[30]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2554,7 +2617,7 @@ func (x *Thumbnail) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Thumbnail.ProtoReflect.Descriptor instead.
 func (*Thumbnail) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{30}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *Thumbnail) GetParticipantId() string {
@@ -2580,7 +2643,7 @@ type Thumbnails struct {
 
 func (x *Thumbnails) Reset() {
 	*x = Thumbnails{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[31]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2592,7 +2655,7 @@ func (x *Thumbnails) String() string {
 func (*Thumbnails) ProtoMessage() {}
 
 func (x *Thumbnails) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[31]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2605,7 +2668,7 @@ func (x *Thumbnails) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Thumbnails.ProtoReflect.Descriptor instead.
 func (*Thumbnails) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{31}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *Thumbnails) GetThumbnails() []*Thumbnail {
@@ -2624,7 +2687,7 @@ type ConversationCreated struct {
 
 func (x *ConversationCreated) Reset() {
 	*x = ConversationCreated{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[32]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2636,7 +2699,7 @@ func (x *ConversationCreated) String() string {
 func (*ConversationCreated) ProtoMessage() {}
 
 func (x *ConversationCreated) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[32]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2649,7 +2712,7 @@ func (x *ConversationCreated) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConversationCreated.ProtoReflect.Descriptor instead.
 func (*ConversationCreated) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{32}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ConversationCreated) GetConversation() *Conversation {
@@ -2666,13 +2729,14 @@ type Contact struct {
 	Name            string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Number          string                 `protobuf:"bytes,3,opt,name=number,proto3" json:"number,omitempty"`
 	FormattedNumber string                 `protobuf:"bytes,4,opt,name=formatted_number,json=formattedNumber,proto3" json:"formatted_number,omitempty"`
+	ParticipantId   string                 `protobuf:"bytes,5,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"` // the contact's participant, when the phone gives one; else empty
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Contact) Reset() {
 	*x = Contact{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[33]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2684,7 +2748,7 @@ func (x *Contact) String() string {
 func (*Contact) ProtoMessage() {}
 
 func (x *Contact) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[33]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2697,7 +2761,7 @@ func (x *Contact) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Contact.ProtoReflect.Descriptor instead.
 func (*Contact) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{33}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *Contact) GetContactId() string {
@@ -2728,6 +2792,13 @@ func (x *Contact) GetFormattedNumber() string {
 	return ""
 }
 
+func (x *Contact) GetParticipantId() string {
+	if x != nil {
+		return x.ParticipantId
+	}
+	return ""
+}
+
 type Contacts struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Contacts      []*Contact             `protobuf:"bytes,1,rep,name=contacts,proto3" json:"contacts,omitempty"` // only contacts with a number, in the phone's order
@@ -2737,7 +2808,7 @@ type Contacts struct {
 
 func (x *Contacts) Reset() {
 	*x = Contacts{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[34]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2749,7 +2820,7 @@ func (x *Contacts) String() string {
 func (*Contacts) ProtoMessage() {}
 
 func (x *Contacts) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[34]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2762,7 +2833,7 @@ func (x *Contacts) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Contacts.ProtoReflect.Descriptor instead.
 func (*Contacts) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{34}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *Contacts) GetContacts() []*Contact {
@@ -2783,7 +2854,7 @@ type RcsCapability struct {
 
 func (x *RcsCapability) Reset() {
 	*x = RcsCapability{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[35]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2795,7 +2866,7 @@ func (x *RcsCapability) String() string {
 func (*RcsCapability) ProtoMessage() {}
 
 func (x *RcsCapability) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[35]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2808,7 +2879,7 @@ func (x *RcsCapability) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RcsCapability.ProtoReflect.Descriptor instead.
 func (*RcsCapability) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{35}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *RcsCapability) GetChecked() bool {
@@ -2841,7 +2912,7 @@ type RcsStatus struct {
 
 func (x *RcsStatus) Reset() {
 	*x = RcsStatus{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[36]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2853,7 +2924,7 @@ func (x *RcsStatus) String() string {
 func (*RcsStatus) ProtoMessage() {}
 
 func (x *RcsStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[36]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2866,7 +2937,7 @@ func (x *RcsStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RcsStatus.ProtoReflect.Descriptor instead.
 func (*RcsStatus) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{36}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *RcsStatus) GetResults() []*RcsCapability {
@@ -2892,7 +2963,7 @@ type Participant struct {
 
 func (x *Participant) Reset() {
 	*x = Participant{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[37]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2904,7 +2975,7 @@ func (x *Participant) String() string {
 func (*Participant) ProtoMessage() {}
 
 func (x *Participant) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[37]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2917,7 +2988,7 @@ func (x *Participant) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Participant.ProtoReflect.Descriptor instead.
 func (*Participant) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{37}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *Participant) GetId() string {
@@ -3001,7 +3072,7 @@ type Conversation struct {
 
 func (x *Conversation) Reset() {
 	*x = Conversation{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[38]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3013,7 +3084,7 @@ func (x *Conversation) String() string {
 func (*Conversation) ProtoMessage() {}
 
 func (x *Conversation) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[38]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3026,7 +3097,7 @@ func (x *Conversation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Conversation.ProtoReflect.Descriptor instead.
 func (*Conversation) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{38}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *Conversation) GetId() string {
@@ -3158,7 +3229,7 @@ type Reaction struct {
 
 func (x *Reaction) Reset() {
 	*x = Reaction{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[39]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3170,7 +3241,7 @@ func (x *Reaction) String() string {
 func (*Reaction) ProtoMessage() {}
 
 func (x *Reaction) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[39]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3183,7 +3254,7 @@ func (x *Reaction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Reaction.ProtoReflect.Descriptor instead.
 func (*Reaction) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{39}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *Reaction) GetEmoji() string {
@@ -3220,7 +3291,7 @@ type Media struct {
 
 func (x *Media) Reset() {
 	*x = Media{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[40]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3232,7 +3303,7 @@ func (x *Media) String() string {
 func (*Media) ProtoMessage() {}
 
 func (x *Media) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[40]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3245,7 +3316,7 @@ func (x *Media) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Media.ProtoReflect.Descriptor instead.
 func (*Media) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{40}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *Media) GetMediaId() string {
@@ -3347,7 +3418,7 @@ type Message struct {
 
 func (x *Message) Reset() {
 	*x = Message{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[41]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3359,7 +3430,7 @@ func (x *Message) String() string {
 func (*Message) ProtoMessage() {}
 
 func (x *Message) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[41]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3372,7 +3443,7 @@ func (x *Message) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Message.ProtoReflect.Descriptor instead.
 func (*Message) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{41}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *Message) GetId() string {
@@ -3486,7 +3557,7 @@ type SimCard struct {
 
 func (x *SimCard) Reset() {
 	*x = SimCard{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[42]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3498,7 +3569,7 @@ func (x *SimCard) String() string {
 func (*SimCard) ProtoMessage() {}
 
 func (x *SimCard) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[42]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3511,7 +3582,7 @@ func (x *SimCard) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SimCard.ProtoReflect.Descriptor instead.
 func (*SimCard) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{42}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *SimCard) GetSim() *Sim {
@@ -3571,7 +3642,7 @@ type Event struct {
 
 func (x *Event) Reset() {
 	*x = Event{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[43]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3583,7 +3654,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[43]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3596,7 +3667,7 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{43}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *Event) GetBody() isEvent_Body {
@@ -3786,7 +3857,7 @@ type Hello struct {
 
 func (x *Hello) Reset() {
 	*x = Hello{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[44]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3798,7 +3869,7 @@ func (x *Hello) String() string {
 func (*Hello) ProtoMessage() {}
 
 func (x *Hello) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[44]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3811,7 +3882,7 @@ func (x *Hello) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Hello.ProtoReflect.Descriptor instead.
 func (*Hello) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{44}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *Hello) GetProtocolVersion() uint32 {
@@ -3844,7 +3915,7 @@ type SessionUpdated struct {
 
 func (x *SessionUpdated) Reset() {
 	*x = SessionUpdated{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[45]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3856,7 +3927,7 @@ func (x *SessionUpdated) String() string {
 func (*SessionUpdated) ProtoMessage() {}
 
 func (x *SessionUpdated) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[45]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3869,7 +3940,7 @@ func (x *SessionUpdated) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SessionUpdated.ProtoReflect.Descriptor instead.
 func (*SessionUpdated) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{45}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *SessionUpdated) GetSessionBlob() []byte {
@@ -3889,7 +3960,7 @@ type ConnectionState struct {
 
 func (x *ConnectionState) Reset() {
 	*x = ConnectionState{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[46]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3901,7 +3972,7 @@ func (x *ConnectionState) String() string {
 func (*ConnectionState) ProtoMessage() {}
 
 func (x *ConnectionState) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[46]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3914,7 +3985,7 @@ func (x *ConnectionState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectionState.ProtoReflect.Descriptor instead.
 func (*ConnectionState) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{46}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *ConnectionState) GetState() ConnState {
@@ -3940,7 +4011,7 @@ type PairQr struct {
 
 func (x *PairQr) Reset() {
 	*x = PairQr{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[47]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3952,7 +4023,7 @@ func (x *PairQr) String() string {
 func (*PairQr) ProtoMessage() {}
 
 func (x *PairQr) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[47]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3965,7 +4036,7 @@ func (x *PairQr) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PairQr.ProtoReflect.Descriptor instead.
 func (*PairQr) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{47}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *PairQr) GetUrl() string {
@@ -3984,7 +4055,7 @@ type PairSuccess struct {
 
 func (x *PairSuccess) Reset() {
 	*x = PairSuccess{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[48]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3996,7 +4067,7 @@ func (x *PairSuccess) String() string {
 func (*PairSuccess) ProtoMessage() {}
 
 func (x *PairSuccess) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[48]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4009,7 +4080,7 @@ func (x *PairSuccess) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PairSuccess.ProtoReflect.Descriptor instead.
 func (*PairSuccess) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{48}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *PairSuccess) GetSessionBlob() []byte {
@@ -4028,7 +4099,7 @@ type ConversationUpserted struct {
 
 func (x *ConversationUpserted) Reset() {
 	*x = ConversationUpserted{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[49]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4040,7 +4111,7 @@ func (x *ConversationUpserted) String() string {
 func (*ConversationUpserted) ProtoMessage() {}
 
 func (x *ConversationUpserted) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[49]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4053,7 +4124,7 @@ func (x *ConversationUpserted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConversationUpserted.ProtoReflect.Descriptor instead.
 func (*ConversationUpserted) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{49}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *ConversationUpserted) GetConversation() *Conversation {
@@ -4073,7 +4144,7 @@ type MessageUpserted struct {
 
 func (x *MessageUpserted) Reset() {
 	*x = MessageUpserted{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[50]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4085,7 +4156,7 @@ func (x *MessageUpserted) String() string {
 func (*MessageUpserted) ProtoMessage() {}
 
 func (x *MessageUpserted) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[50]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4098,7 +4169,7 @@ func (x *MessageUpserted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageUpserted.ProtoReflect.Descriptor instead.
 func (*MessageUpserted) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{50}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *MessageUpserted) GetMessage() *Message {
@@ -4125,7 +4196,7 @@ type MessageDeleted struct {
 
 func (x *MessageDeleted) Reset() {
 	*x = MessageDeleted{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[51]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4137,7 +4208,7 @@ func (x *MessageDeleted) String() string {
 func (*MessageDeleted) ProtoMessage() {}
 
 func (x *MessageDeleted) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[51]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4150,7 +4221,7 @@ func (x *MessageDeleted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageDeleted.ProtoReflect.Descriptor instead.
 func (*MessageDeleted) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{51}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *MessageDeleted) GetConversationId() string {
@@ -4176,7 +4247,7 @@ type SimsUpdated struct {
 
 func (x *SimsUpdated) Reset() {
 	*x = SimsUpdated{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[52]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4188,7 +4259,7 @@ func (x *SimsUpdated) String() string {
 func (*SimsUpdated) ProtoMessage() {}
 
 func (x *SimsUpdated) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[52]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4201,7 +4272,7 @@ func (x *SimsUpdated) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SimsUpdated.ProtoReflect.Descriptor instead.
 func (*SimsUpdated) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{52}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *SimsUpdated) GetSims() []*SimCard {
@@ -4219,7 +4290,7 @@ type ResyncNeeded struct {
 
 func (x *ResyncNeeded) Reset() {
 	*x = ResyncNeeded{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[53]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4231,7 +4302,7 @@ func (x *ResyncNeeded) String() string {
 func (*ResyncNeeded) ProtoMessage() {}
 
 func (x *ResyncNeeded) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[53]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4244,7 +4315,7 @@ func (x *ResyncNeeded) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResyncNeeded.ProtoReflect.Descriptor instead.
 func (*ResyncNeeded) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{53}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{54}
 }
 
 // Google-account ("gaia") pairing. Cookies come from a signed-in messages.google.com session:
@@ -4261,7 +4332,7 @@ type StartGoogleLogin struct {
 
 func (x *StartGoogleLogin) Reset() {
 	*x = StartGoogleLogin{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[54]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4273,7 +4344,7 @@ func (x *StartGoogleLogin) String() string {
 func (*StartGoogleLogin) ProtoMessage() {}
 
 func (x *StartGoogleLogin) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[54]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4286,7 +4357,7 @@ func (x *StartGoogleLogin) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartGoogleLogin.ProtoReflect.Descriptor instead.
 func (*StartGoogleLogin) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{54}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *StartGoogleLogin) GetCookies() map[string]string {
@@ -4305,7 +4376,7 @@ type PairEmoji struct {
 
 func (x *PairEmoji) Reset() {
 	*x = PairEmoji{}
-	mi := &file_ertext_v1_ertext_proto_msgTypes[55]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4317,7 +4388,7 @@ func (x *PairEmoji) String() string {
 func (*PairEmoji) ProtoMessage() {}
 
 func (x *PairEmoji) ProtoReflect() protoreflect.Message {
-	mi := &file_ertext_v1_ertext_proto_msgTypes[55]
+	mi := &file_ertext_v1_ertext_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4330,7 +4401,7 @@ func (x *PairEmoji) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PairEmoji.ProtoReflect.Descriptor instead.
 func (*PairEmoji) Descriptor() ([]byte, []int) {
-	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{55}
+	return file_ertext_v1_ertext_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *PairEmoji) GetEmoji() string {
@@ -4349,8 +4420,7 @@ const file_ertext_v1_ertext_proto_rawDesc = "" +
 	"\arequest\x18\x01 \x01(\v2\x12.ertext.v1.RequestH\x00R\arequest\x121\n" +
 	"\bresponse\x18\x02 \x01(\v2\x13.ertext.v1.ResponseH\x00R\bresponse\x12(\n" +
 	"\x05event\x18\x03 \x01(\v2\x10.ertext.v1.EventH\x00R\x05eventB\x06\n" +
-	"\x04kind\"\xfc\n" +
-	"\n" +
+	"\x04kind\"\xd5\v\n" +
 	"\aRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12%\n" +
 	"\x04ping\x18\n" +
@@ -4377,7 +4447,8 @@ const file_ertext_v1_ertext_proto_rawDesc = "" +
 	"\x13delete_conversation\x18\x1b \x01(\v2\x1d.ertext.v1.DeleteConversationH\x00R\x12deleteConversation\x12a\n" +
 	"\x1aget_or_create_conversation\x18\x1c \x01(\v2\".ertext.v1.GetOrCreateConversationH\x00R\x17getOrCreateConversation\x12>\n" +
 	"\rlist_contacts\x18\x1d \x01(\v2\x17.ertext.v1.ListContactsH\x00R\flistContacts\x122\n" +
-	"\tcheck_rcs\x18\x1e \x01(\v2\x13.ertext.v1.CheckRcsH\x00R\bcheckRcsB\x06\n" +
+	"\tcheck_rcs\x18\x1e \x01(\v2\x13.ertext.v1.CheckRcsH\x00R\bcheckRcs\x12W\n" +
+	"\x16get_contact_thumbnails\x18\x1f \x01(\v2\x1f.ertext.v1.GetContactThumbnailsH\x00R\x14getContactThumbnailsB\x06\n" +
 	"\x04body\"\x06\n" +
 	"\x04Ping\"\x0e\n" +
 	"\fStartPairing\"\x10\n" +
@@ -4442,7 +4513,10 @@ const file_ertext_v1_ertext_proto_rawDesc = "" +
 	"\bCheckRcs\x12\x18\n" +
 	"\anumbers\x18\x01 \x03(\tR\anumbers\"8\n" +
 	"\rGetThumbnails\x12'\n" +
-	"\x0fparticipant_ids\x18\x01 \x03(\tR\x0eparticipantIds\"\x9d\x04\n" +
+	"\x0fparticipant_ids\x18\x01 \x03(\tR\x0eparticipantIds\"7\n" +
+	"\x14GetContactThumbnails\x12\x1f\n" +
+	"\vcontact_ids\x18\x01 \x03(\tR\n" +
+	"contactIds\"\x9d\x04\n" +
 	"\bResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12+\n" +
 	"\x05error\x18\x02 \x01(\v2\x13.ertext.v1.RpcErrorH\x00R\x05error\x12\"\n" +
@@ -4480,13 +4554,14 @@ const file_ertext_v1_ertext_proto_rawDesc = "" +
 	"thumbnails\x18\x01 \x03(\v2\x14.ertext.v1.ThumbnailR\n" +
 	"thumbnails\"R\n" +
 	"\x13ConversationCreated\x12;\n" +
-	"\fconversation\x18\x01 \x01(\v2\x17.ertext.v1.ConversationR\fconversation\"\x7f\n" +
+	"\fconversation\x18\x01 \x01(\v2\x17.ertext.v1.ConversationR\fconversation\"\xa6\x01\n" +
 	"\aContact\x12\x1d\n" +
 	"\n" +
 	"contact_id\x18\x01 \x01(\tR\tcontactId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
 	"\x06number\x18\x03 \x01(\tR\x06number\x12)\n" +
-	"\x10formatted_number\x18\x04 \x01(\tR\x0fformattedNumber\":\n" +
+	"\x10formatted_number\x18\x04 \x01(\tR\x0fformattedNumber\x12%\n" +
+	"\x0eparticipant_id\x18\x05 \x01(\tR\rparticipantId\":\n" +
 	"\bContacts\x12.\n" +
 	"\bcontacts\x18\x01 \x03(\v2\x12.ertext.v1.ContactR\bcontacts\"o\n" +
 	"\rRcsCapability\x12\x18\n" +
@@ -4685,7 +4760,7 @@ func file_ertext_v1_ertext_proto_rawDescGZIP() []byte {
 }
 
 var file_ertext_v1_ertext_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
-var file_ertext_v1_ertext_proto_msgTypes = make([]protoimpl.MessageInfo, 57)
+var file_ertext_v1_ertext_proto_msgTypes = make([]protoimpl.MessageInfo, 58)
 var file_ertext_v1_ertext_proto_goTypes = []any{
 	(Folder)(0),                     // 0: ertext.v1.Folder
 	(ReactionAction)(0),             // 1: ertext.v1.ReactionAction
@@ -4719,44 +4794,45 @@ var file_ertext_v1_ertext_proto_goTypes = []any{
 	(*ListContacts)(nil),            // 29: ertext.v1.ListContacts
 	(*CheckRcs)(nil),                // 30: ertext.v1.CheckRcs
 	(*GetThumbnails)(nil),           // 31: ertext.v1.GetThumbnails
-	(*Response)(nil),                // 32: ertext.v1.Response
-	(*RpcError)(nil),                // 33: ertext.v1.RpcError
-	(*Ack)(nil),                     // 34: ertext.v1.Ack
-	(*Pong)(nil),                    // 35: ertext.v1.Pong
-	(*ConversationPage)(nil),        // 36: ertext.v1.ConversationPage
-	(*MessagePage)(nil),             // 37: ertext.v1.MessagePage
-	(*Thumbnail)(nil),               // 38: ertext.v1.Thumbnail
-	(*Thumbnails)(nil),              // 39: ertext.v1.Thumbnails
-	(*ConversationCreated)(nil),     // 40: ertext.v1.ConversationCreated
-	(*Contact)(nil),                 // 41: ertext.v1.Contact
-	(*Contacts)(nil),                // 42: ertext.v1.Contacts
-	(*RcsCapability)(nil),           // 43: ertext.v1.RcsCapability
-	(*RcsStatus)(nil),               // 44: ertext.v1.RcsStatus
-	(*Participant)(nil),             // 45: ertext.v1.Participant
-	(*Conversation)(nil),            // 46: ertext.v1.Conversation
-	(*Reaction)(nil),                // 47: ertext.v1.Reaction
-	(*Media)(nil),                   // 48: ertext.v1.Media
-	(*Message)(nil),                 // 49: ertext.v1.Message
-	(*SimCard)(nil),                 // 50: ertext.v1.SimCard
-	(*Event)(nil),                   // 51: ertext.v1.Event
-	(*Hello)(nil),                   // 52: ertext.v1.Hello
-	(*SessionUpdated)(nil),          // 53: ertext.v1.SessionUpdated
-	(*ConnectionState)(nil),         // 54: ertext.v1.ConnectionState
-	(*PairQr)(nil),                  // 55: ertext.v1.PairQr
-	(*PairSuccess)(nil),             // 56: ertext.v1.PairSuccess
-	(*ConversationUpserted)(nil),    // 57: ertext.v1.ConversationUpserted
-	(*MessageUpserted)(nil),         // 58: ertext.v1.MessageUpserted
-	(*MessageDeleted)(nil),          // 59: ertext.v1.MessageDeleted
-	(*SimsUpdated)(nil),             // 60: ertext.v1.SimsUpdated
-	(*ResyncNeeded)(nil),            // 61: ertext.v1.ResyncNeeded
-	(*StartGoogleLogin)(nil),        // 62: ertext.v1.StartGoogleLogin
-	(*PairEmoji)(nil),               // 63: ertext.v1.PairEmoji
-	nil,                             // 64: ertext.v1.StartGoogleLogin.CookiesEntry
+	(*GetContactThumbnails)(nil),    // 32: ertext.v1.GetContactThumbnails
+	(*Response)(nil),                // 33: ertext.v1.Response
+	(*RpcError)(nil),                // 34: ertext.v1.RpcError
+	(*Ack)(nil),                     // 35: ertext.v1.Ack
+	(*Pong)(nil),                    // 36: ertext.v1.Pong
+	(*ConversationPage)(nil),        // 37: ertext.v1.ConversationPage
+	(*MessagePage)(nil),             // 38: ertext.v1.MessagePage
+	(*Thumbnail)(nil),               // 39: ertext.v1.Thumbnail
+	(*Thumbnails)(nil),              // 40: ertext.v1.Thumbnails
+	(*ConversationCreated)(nil),     // 41: ertext.v1.ConversationCreated
+	(*Contact)(nil),                 // 42: ertext.v1.Contact
+	(*Contacts)(nil),                // 43: ertext.v1.Contacts
+	(*RcsCapability)(nil),           // 44: ertext.v1.RcsCapability
+	(*RcsStatus)(nil),               // 45: ertext.v1.RcsStatus
+	(*Participant)(nil),             // 46: ertext.v1.Participant
+	(*Conversation)(nil),            // 47: ertext.v1.Conversation
+	(*Reaction)(nil),                // 48: ertext.v1.Reaction
+	(*Media)(nil),                   // 49: ertext.v1.Media
+	(*Message)(nil),                 // 50: ertext.v1.Message
+	(*SimCard)(nil),                 // 51: ertext.v1.SimCard
+	(*Event)(nil),                   // 52: ertext.v1.Event
+	(*Hello)(nil),                   // 53: ertext.v1.Hello
+	(*SessionUpdated)(nil),          // 54: ertext.v1.SessionUpdated
+	(*ConnectionState)(nil),         // 55: ertext.v1.ConnectionState
+	(*PairQr)(nil),                  // 56: ertext.v1.PairQr
+	(*PairSuccess)(nil),             // 57: ertext.v1.PairSuccess
+	(*ConversationUpserted)(nil),    // 58: ertext.v1.ConversationUpserted
+	(*MessageUpserted)(nil),         // 59: ertext.v1.MessageUpserted
+	(*MessageDeleted)(nil),          // 60: ertext.v1.MessageDeleted
+	(*SimsUpdated)(nil),             // 61: ertext.v1.SimsUpdated
+	(*ResyncNeeded)(nil),            // 62: ertext.v1.ResyncNeeded
+	(*StartGoogleLogin)(nil),        // 63: ertext.v1.StartGoogleLogin
+	(*PairEmoji)(nil),               // 64: ertext.v1.PairEmoji
+	nil,                             // 65: ertext.v1.StartGoogleLogin.CookiesEntry
 }
 var file_ertext_v1_ertext_proto_depIdxs = []int32{
 	9,  // 0: ertext.v1.Envelope.request:type_name -> ertext.v1.Request
-	32, // 1: ertext.v1.Envelope.response:type_name -> ertext.v1.Response
-	51, // 2: ertext.v1.Envelope.event:type_name -> ertext.v1.Event
+	33, // 1: ertext.v1.Envelope.response:type_name -> ertext.v1.Response
+	52, // 2: ertext.v1.Envelope.event:type_name -> ertext.v1.Event
 	10, // 3: ertext.v1.Request.ping:type_name -> ertext.v1.Ping
 	11, // 4: ertext.v1.Request.start_pairing:type_name -> ertext.v1.StartPairing
 	12, // 5: ertext.v1.Request.refresh_pairing:type_name -> ertext.v1.RefreshPairing
@@ -4771,66 +4847,67 @@ var file_ertext_v1_ertext_proto_depIdxs = []int32{
 	23, // 14: ertext.v1.Request.mark_read:type_name -> ertext.v1.MarkRead
 	24, // 15: ertext.v1.Request.download_media:type_name -> ertext.v1.DownloadMedia
 	31, // 16: ertext.v1.Request.get_thumbnails:type_name -> ertext.v1.GetThumbnails
-	62, // 17: ertext.v1.Request.start_google_login:type_name -> ertext.v1.StartGoogleLogin
+	63, // 17: ertext.v1.Request.start_google_login:type_name -> ertext.v1.StartGoogleLogin
 	25, // 18: ertext.v1.Request.request_full_media:type_name -> ertext.v1.RequestFullMedia
 	26, // 19: ertext.v1.Request.archive_conversation:type_name -> ertext.v1.ArchiveConversation
 	27, // 20: ertext.v1.Request.delete_conversation:type_name -> ertext.v1.DeleteConversation
 	28, // 21: ertext.v1.Request.get_or_create_conversation:type_name -> ertext.v1.GetOrCreateConversation
 	29, // 22: ertext.v1.Request.list_contacts:type_name -> ertext.v1.ListContacts
 	30, // 23: ertext.v1.Request.check_rcs:type_name -> ertext.v1.CheckRcs
-	0,  // 24: ertext.v1.ListConversations.folder:type_name -> ertext.v1.Folder
-	17, // 25: ertext.v1.ListConversations.cursor:type_name -> ertext.v1.Cursor
-	17, // 26: ertext.v1.FetchMessages.cursor:type_name -> ertext.v1.Cursor
-	20, // 27: ertext.v1.SendMessage.sim:type_name -> ertext.v1.Sim
-	1,  // 28: ertext.v1.SendReaction.action:type_name -> ertext.v1.ReactionAction
-	20, // 29: ertext.v1.SendReaction.sim:type_name -> ertext.v1.Sim
-	33, // 30: ertext.v1.Response.error:type_name -> ertext.v1.RpcError
-	34, // 31: ertext.v1.Response.ack:type_name -> ertext.v1.Ack
-	35, // 32: ertext.v1.Response.pong:type_name -> ertext.v1.Pong
-	36, // 33: ertext.v1.Response.conversation_page:type_name -> ertext.v1.ConversationPage
-	37, // 34: ertext.v1.Response.message_page:type_name -> ertext.v1.MessagePage
-	39, // 35: ertext.v1.Response.thumbnails:type_name -> ertext.v1.Thumbnails
-	40, // 36: ertext.v1.Response.conversation_created:type_name -> ertext.v1.ConversationCreated
-	42, // 37: ertext.v1.Response.contacts:type_name -> ertext.v1.Contacts
-	44, // 38: ertext.v1.Response.rcs_status:type_name -> ertext.v1.RcsStatus
-	2,  // 39: ertext.v1.RpcError.code:type_name -> ertext.v1.ErrorCode
-	46, // 40: ertext.v1.ConversationPage.conversations:type_name -> ertext.v1.Conversation
-	17, // 41: ertext.v1.ConversationPage.next:type_name -> ertext.v1.Cursor
-	49, // 42: ertext.v1.MessagePage.messages:type_name -> ertext.v1.Message
-	17, // 43: ertext.v1.MessagePage.next:type_name -> ertext.v1.Cursor
-	38, // 44: ertext.v1.Thumbnails.thumbnails:type_name -> ertext.v1.Thumbnail
-	46, // 45: ertext.v1.ConversationCreated.conversation:type_name -> ertext.v1.Conversation
-	41, // 46: ertext.v1.Contacts.contacts:type_name -> ertext.v1.Contact
-	43, // 47: ertext.v1.RcsStatus.results:type_name -> ertext.v1.RcsCapability
-	3,  // 48: ertext.v1.Conversation.type:type_name -> ertext.v1.ConversationType
-	4,  // 49: ertext.v1.Conversation.status:type_name -> ertext.v1.ConversationStatus
-	45, // 50: ertext.v1.Conversation.participants:type_name -> ertext.v1.Participant
-	5,  // 51: ertext.v1.Message.kind:type_name -> ertext.v1.MessageKind
-	6,  // 52: ertext.v1.Message.status:type_name -> ertext.v1.MessageStatus
-	48, // 53: ertext.v1.Message.media:type_name -> ertext.v1.Media
-	47, // 54: ertext.v1.Message.reactions:type_name -> ertext.v1.Reaction
-	20, // 55: ertext.v1.SimCard.sim:type_name -> ertext.v1.Sim
-	52, // 56: ertext.v1.Event.hello:type_name -> ertext.v1.Hello
-	53, // 57: ertext.v1.Event.session_updated:type_name -> ertext.v1.SessionUpdated
-	54, // 58: ertext.v1.Event.connection_state:type_name -> ertext.v1.ConnectionState
-	55, // 59: ertext.v1.Event.pair_qr:type_name -> ertext.v1.PairQr
-	56, // 60: ertext.v1.Event.pair_success:type_name -> ertext.v1.PairSuccess
-	57, // 61: ertext.v1.Event.conversation_upserted:type_name -> ertext.v1.ConversationUpserted
-	58, // 62: ertext.v1.Event.message_upserted:type_name -> ertext.v1.MessageUpserted
-	59, // 63: ertext.v1.Event.message_deleted:type_name -> ertext.v1.MessageDeleted
-	60, // 64: ertext.v1.Event.sims_updated:type_name -> ertext.v1.SimsUpdated
-	61, // 65: ertext.v1.Event.resync_needed:type_name -> ertext.v1.ResyncNeeded
-	63, // 66: ertext.v1.Event.pair_emoji:type_name -> ertext.v1.PairEmoji
-	7,  // 67: ertext.v1.ConnectionState.state:type_name -> ertext.v1.ConnState
-	46, // 68: ertext.v1.ConversationUpserted.conversation:type_name -> ertext.v1.Conversation
-	49, // 69: ertext.v1.MessageUpserted.message:type_name -> ertext.v1.Message
-	50, // 70: ertext.v1.SimsUpdated.sims:type_name -> ertext.v1.SimCard
-	64, // 71: ertext.v1.StartGoogleLogin.cookies:type_name -> ertext.v1.StartGoogleLogin.CookiesEntry
-	72, // [72:72] is the sub-list for method output_type
-	72, // [72:72] is the sub-list for method input_type
-	72, // [72:72] is the sub-list for extension type_name
-	72, // [72:72] is the sub-list for extension extendee
-	0,  // [0:72] is the sub-list for field type_name
+	32, // 24: ertext.v1.Request.get_contact_thumbnails:type_name -> ertext.v1.GetContactThumbnails
+	0,  // 25: ertext.v1.ListConversations.folder:type_name -> ertext.v1.Folder
+	17, // 26: ertext.v1.ListConversations.cursor:type_name -> ertext.v1.Cursor
+	17, // 27: ertext.v1.FetchMessages.cursor:type_name -> ertext.v1.Cursor
+	20, // 28: ertext.v1.SendMessage.sim:type_name -> ertext.v1.Sim
+	1,  // 29: ertext.v1.SendReaction.action:type_name -> ertext.v1.ReactionAction
+	20, // 30: ertext.v1.SendReaction.sim:type_name -> ertext.v1.Sim
+	34, // 31: ertext.v1.Response.error:type_name -> ertext.v1.RpcError
+	35, // 32: ertext.v1.Response.ack:type_name -> ertext.v1.Ack
+	36, // 33: ertext.v1.Response.pong:type_name -> ertext.v1.Pong
+	37, // 34: ertext.v1.Response.conversation_page:type_name -> ertext.v1.ConversationPage
+	38, // 35: ertext.v1.Response.message_page:type_name -> ertext.v1.MessagePage
+	40, // 36: ertext.v1.Response.thumbnails:type_name -> ertext.v1.Thumbnails
+	41, // 37: ertext.v1.Response.conversation_created:type_name -> ertext.v1.ConversationCreated
+	43, // 38: ertext.v1.Response.contacts:type_name -> ertext.v1.Contacts
+	45, // 39: ertext.v1.Response.rcs_status:type_name -> ertext.v1.RcsStatus
+	2,  // 40: ertext.v1.RpcError.code:type_name -> ertext.v1.ErrorCode
+	47, // 41: ertext.v1.ConversationPage.conversations:type_name -> ertext.v1.Conversation
+	17, // 42: ertext.v1.ConversationPage.next:type_name -> ertext.v1.Cursor
+	50, // 43: ertext.v1.MessagePage.messages:type_name -> ertext.v1.Message
+	17, // 44: ertext.v1.MessagePage.next:type_name -> ertext.v1.Cursor
+	39, // 45: ertext.v1.Thumbnails.thumbnails:type_name -> ertext.v1.Thumbnail
+	47, // 46: ertext.v1.ConversationCreated.conversation:type_name -> ertext.v1.Conversation
+	42, // 47: ertext.v1.Contacts.contacts:type_name -> ertext.v1.Contact
+	44, // 48: ertext.v1.RcsStatus.results:type_name -> ertext.v1.RcsCapability
+	3,  // 49: ertext.v1.Conversation.type:type_name -> ertext.v1.ConversationType
+	4,  // 50: ertext.v1.Conversation.status:type_name -> ertext.v1.ConversationStatus
+	46, // 51: ertext.v1.Conversation.participants:type_name -> ertext.v1.Participant
+	5,  // 52: ertext.v1.Message.kind:type_name -> ertext.v1.MessageKind
+	6,  // 53: ertext.v1.Message.status:type_name -> ertext.v1.MessageStatus
+	49, // 54: ertext.v1.Message.media:type_name -> ertext.v1.Media
+	48, // 55: ertext.v1.Message.reactions:type_name -> ertext.v1.Reaction
+	20, // 56: ertext.v1.SimCard.sim:type_name -> ertext.v1.Sim
+	53, // 57: ertext.v1.Event.hello:type_name -> ertext.v1.Hello
+	54, // 58: ertext.v1.Event.session_updated:type_name -> ertext.v1.SessionUpdated
+	55, // 59: ertext.v1.Event.connection_state:type_name -> ertext.v1.ConnectionState
+	56, // 60: ertext.v1.Event.pair_qr:type_name -> ertext.v1.PairQr
+	57, // 61: ertext.v1.Event.pair_success:type_name -> ertext.v1.PairSuccess
+	58, // 62: ertext.v1.Event.conversation_upserted:type_name -> ertext.v1.ConversationUpserted
+	59, // 63: ertext.v1.Event.message_upserted:type_name -> ertext.v1.MessageUpserted
+	60, // 64: ertext.v1.Event.message_deleted:type_name -> ertext.v1.MessageDeleted
+	61, // 65: ertext.v1.Event.sims_updated:type_name -> ertext.v1.SimsUpdated
+	62, // 66: ertext.v1.Event.resync_needed:type_name -> ertext.v1.ResyncNeeded
+	64, // 67: ertext.v1.Event.pair_emoji:type_name -> ertext.v1.PairEmoji
+	7,  // 68: ertext.v1.ConnectionState.state:type_name -> ertext.v1.ConnState
+	47, // 69: ertext.v1.ConversationUpserted.conversation:type_name -> ertext.v1.Conversation
+	50, // 70: ertext.v1.MessageUpserted.message:type_name -> ertext.v1.Message
+	51, // 71: ertext.v1.SimsUpdated.sims:type_name -> ertext.v1.SimCard
+	65, // 72: ertext.v1.StartGoogleLogin.cookies:type_name -> ertext.v1.StartGoogleLogin.CookiesEntry
+	73, // [73:73] is the sub-list for method output_type
+	73, // [73:73] is the sub-list for method input_type
+	73, // [73:73] is the sub-list for extension type_name
+	73, // [73:73] is the sub-list for extension extendee
+	0,  // [0:73] is the sub-list for field type_name
 }
 
 func init() { file_ertext_v1_ertext_proto_init() }
@@ -4865,8 +4942,9 @@ func file_ertext_v1_ertext_proto_init() {
 		(*Request_GetOrCreateConversation)(nil),
 		(*Request_ListContacts)(nil),
 		(*Request_CheckRcs)(nil),
+		(*Request_GetContactThumbnails)(nil),
 	}
-	file_ertext_v1_ertext_proto_msgTypes[24].OneofWrappers = []any{
+	file_ertext_v1_ertext_proto_msgTypes[25].OneofWrappers = []any{
 		(*Response_Error)(nil),
 		(*Response_Ack)(nil),
 		(*Response_Pong)(nil),
@@ -4877,7 +4955,7 @@ func file_ertext_v1_ertext_proto_init() {
 		(*Response_Contacts)(nil),
 		(*Response_RcsStatus)(nil),
 	}
-	file_ertext_v1_ertext_proto_msgTypes[43].OneofWrappers = []any{
+	file_ertext_v1_ertext_proto_msgTypes[44].OneofWrappers = []any{
 		(*Event_Hello)(nil),
 		(*Event_SessionUpdated)(nil),
 		(*Event_ConnectionState)(nil),
@@ -4896,7 +4974,7 @@ func file_ertext_v1_ertext_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ertext_v1_ertext_proto_rawDesc), len(file_ertext_v1_ertext_proto_rawDesc)),
 			NumEnums:      8,
-			NumMessages:   57,
+			NumMessages:   58,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

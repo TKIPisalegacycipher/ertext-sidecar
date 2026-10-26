@@ -86,7 +86,7 @@ func TestListContacts(t *testing.T) {
 	h, f := connected(t)
 	f.setContacts(
 		&gmproto.ListContactsResponse{Contacts: []*gmproto.Contact{
-			{ContactID: "k1", Name: "Ann", Number: &gmproto.ContactNumber{Number: "+15550100", FormattedNumber: ptr.Ptr("+1 555-0100")}},
+			{ContactID: "k1", ParticipantID: "p7", Name: "Ann", Number: &gmproto.ContactNumber{Number: "+15550100", FormattedNumber: ptr.Ptr("+1 555-0100")}},
 			{ContactID: "k2", Name: "No number"},
 		}},
 		&gmproto.ListTopContactsResponse{Contacts: []*gmproto.Contact{
@@ -100,10 +100,12 @@ func TestListContacts(t *testing.T) {
 	require.Equal(t, "Ann", all[0].GetName())
 	require.Equal(t, "+15550100", all[0].GetNumber())
 	require.Equal(t, "+1 555-0100", all[0].GetFormattedNumber())
+	require.Equal(t, "p7", all[0].GetParticipantId())
 	h.send(req(3, &pb.ListContacts{Top: true}))
 	top := h.response(3).GetContacts().GetContacts()
 	require.Len(t, top, 1)
 	require.Equal(t, "Top", top[0].GetName())
+	require.Empty(t, top[0].GetParticipantId(), "no participant on the phone's contact")
 	require.Contains(t, f.Calls(), "contacts")
 	require.Contains(t, f.Calls(), "topcontacts")
 	require.NoError(t, h.close())

@@ -65,6 +65,8 @@ func (s *Server) handle(req *pb.Request) *pb.Response {
 		return s.requestFullMedia(b.RequestFullMedia)
 	case *pb.Request_GetThumbnails:
 		return s.getThumbnails(b.GetThumbnails)
+	case *pb.Request_GetContactThumbnails:
+		return s.getContactThumbnails(b.GetContactThumbnails)
 	default:
 		return errResp(fmt.Errorf("%w: unknown request body %T", translate.ErrBadRequest, b))
 	}
@@ -447,18 +449,35 @@ func (s *Server) getThumbnails(r *pb.GetThumbnails) *pb.Response {
 		return errResp(badRequest("participant_ids required"))
 	}
 	return s.withClient(requestTimeout, func(ctx context.Context, c gm.Client) *pb.Response {
-		resp, err := c.GetParticipantThumbnail(ctx, r.GetParticipantIds()...)
-		if err != nil {
-			return errResp(err)
-		}
-		out := &pb.Thumbnails{}
-		for _, th := range resp.GetThumbnail() {
-			out.Thumbnails = append(out.Thumbnails, &pb.Thumbnail{
-				ParticipantId: th.GetIdentifier(), Image: th.GetData().GetImageBuffer(),
-			})
-		}
-		return &pb.Response{Result: &pb.Response_Thumbnails{Thumbnails: out}}
+		return thumbnailsOr(c.GetParticipantThumbnail(ctx, r.GetParticipantIds()...))
 	})
+}
+
+// getContactThumbnails answers the phone's contact photos keyed by contact id. Logs counts only.
+func (s *Server) getContactThumbnails(r *pb.GetContactThumbnails) *pb.Response {
+	if len(r.GetContactIds()) == 0 {
+		return errResp(badRequest("contact_ids required"))
+	}
+	return s.withClient(requestTimeout, func(ctx context.Context, c gm.Client) *pb.Response {
+		resp := thumbnailsOr(c.GetContactThumbnail(ctx, r.GetContactIds()...))
+		s.log.Info().Int("asked", len(r.GetContactIds())).
+			Int("thumbnails", len(resp.GetThumbnails().GetThumbnails())).Msg("got contact thumbnails")
+		return resp
+	})
+}
+
+// thumbnailsOr translates a libgm thumbnail answer as is; Rust skips entries with no image.
+func thumbnailsOr(resp *gmproto.GetThumbnailResponse, err error) *pb.Response {
+	if err != nil {
+		return errResp(err)
+	}
+	out := &pb.Thumbnails{}
+	for _, th := range resp.GetThumbnail() {
+		out.Thumbnails = append(out.Thumbnails, &pb.Thumbnail{
+			ParticipantId: th.GetIdentifier(), Image: th.GetData().GetImageBuffer(),
+		})
+	}
+	return &pb.Response{Result: &pb.Response_Thumbnails{Thumbnails: out}}
 }
 
 func (s *Server) downloadMedia(r *pb.DownloadMedia) *pb.Response {

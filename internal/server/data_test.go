@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -149,6 +150,39 @@ func TestThumbnails(t *testing.T) {
 	require.Equal(t, "p2", got[0].GetParticipantId())
 	require.Equal(t, []byte{0x89, 'P', 'N', 'G'}, got[0].GetImage())
 	require.Equal(t, []string{"p2"}, f.gotThumbIDs())
+	require.NoError(t, h.close())
+}
+
+func TestContactThumbnails(t *testing.T) {
+	h, f := connected(t)
+	f.setContactThumbs(&gmproto.GetThumbnailResponse{Thumbnail: []*gmproto.GetThumbnailResponse_Thumbnail{
+		{Identifier: "k1", Data: &gmproto.ThumbnailData{ImageBuffer: []byte{0xFF, 0xD8, 0xFF}}},
+		{Identifier: "k2", Data: &gmproto.ThumbnailData{}}, // no photo: passed on empty, as GetThumbnails does
+	}})
+	h.send(req(2, &pb.GetContactThumbnails{ContactIds: []string{"k1", "k2", "k3"}}))
+	got := h.response(2).GetThumbnails().GetThumbnails()
+	require.Len(t, got, 2)
+	require.Equal(t, "k1", got[0].GetParticipantId())
+	require.Equal(t, []byte{0xFF, 0xD8, 0xFF}, got[0].GetImage())
+	require.Equal(t, "k2", got[1].GetParticipantId())
+	require.Empty(t, got[1].GetImage())
+	require.Equal(t, []string{"k1", "k2", "k3"}, f.gotContactThumbIDs())
+	require.NotContains(t, f.Calls(), "thumbs", "contact photos never ask for participant photos")
+
+	h.send(req(3, &pb.GetContactThumbnails{}))
+	require.Equal(t, pb.ErrorCode_ERROR_CODE_BAD_REQUEST, h.response(3).GetError().GetCode())
+	f.mu.Lock()
+	f.err["contactthumbs"] = errors.New("phone gone")
+	f.mu.Unlock()
+	h.send(req(4, &pb.GetContactThumbnails{ContactIds: []string{"k1"}}))
+	require.NotNil(t, h.response(4).GetError())
+	require.NoError(t, h.close())
+}
+
+func TestContactThumbnailsNeedAClient(t *testing.T) {
+	h := start(t, newFake().factory())
+	h.send(req(1, &pb.GetContactThumbnails{ContactIds: []string{"k1"}}))
+	require.Equal(t, pb.ErrorCode_ERROR_CODE_NOT_CONNECTED, h.response(1).GetError().GetCode())
 	require.NoError(t, h.close())
 }
 

@@ -1,8 +1,10 @@
 # ertext-sidecar
 
-The Google Messages backend for [Ertext](https://github.com/TKIPisalegacycipher/Ertext), a Windows
-Google Messages client. Ertext starts this process and talks to it over stdio using the protocol in
-`proto/ertext/v1/ertext.proto`. The process wraps
+The Google Messages backend for [Okojo](https://github.com/TKIPisalegacycipher/Okojo)'s Messages module.
+Okojo starts this process and talks to it over stdio using the protocol in
+`proto/ertext/v1/ertext.proto`. The protocol was built for Ertext, a former stand-alone client whose
+library crates now live in Okojo as `crates/ertext-*` (TKIPisalegacycipher/Okojo#1554), which is why
+the protocol and this program keep the Ertext name. The process wraps
 [mautrix-gmessages](https://github.com/mautrix/gmessages)' `libgm` and keeps no state on disk.
 
 ## License

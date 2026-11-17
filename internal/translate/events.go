@@ -88,7 +88,7 @@ func Event(evt any) []*pb.Event {
 		}
 		if IsDeleted(e.GetMessageStatus().GetStatus()) {
 			return []*pb.Event{{Body: &pb.Event_MessageDeleted{MessageDeleted: &pb.MessageDeleted{
-				ConversationId: e.GetConversationID(), MessageId: e.GetMessageID(),
+				ConversationId: messageConversationID(e.Message), MessageId: messageID(e.Message),
 			}}}}
 		}
 		return []*pb.Event{{Body: &pb.Event_MessageUpserted{MessageUpserted: &pb.MessageUpserted{

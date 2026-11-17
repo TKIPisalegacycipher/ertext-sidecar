@@ -6,7 +6,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/rs/zerolog v1.35.1
 	github.com/stretchr/testify v1.12.1
-	go.mau.fi/mautrix-gmessages v0.2610.1-0.20261023204119-6026696bf7cd
+	go.mau.fi/mautrix-gmessages v0.2610.1-0.20261112154829-b580a1a14f58
 	go.mau.fi/util v0.11.0
 	google.golang.org/protobuf v1.36.12
 )

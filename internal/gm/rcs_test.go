@@ -25,7 +25,7 @@ func TestLinknamesReachLibgm(t *testing.T) {
 
 // The libgm version rcs.go's linkname signatures were checked against. TestLinknamesReachLibgm
 // proves the symbols exist, not that their signatures still match.
-const linknameLibgmVersion = "v0.2610.1-0.20261023204119-6026696bf7cd"
+const linknameLibgmVersion = "v0.2610.1-0.20261112154829-b580a1a14f58"
 
 func TestLibgmIsTheVersionTheLinknamesWereCheckedAgainst(t *testing.T) {
 	info, ok := debug.ReadBuildInfo()

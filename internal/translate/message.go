@@ -12,9 +12,9 @@ import (
 func Message(m *gmproto.Message) *pb.Message {
 	st := m.GetMessageStatus().GetStatus()
 	out := &pb.Message{
-		Id:                  m.GetMessageID(),
+		Id:                  messageID(m),
 		TmpId:               m.GetTmpID(),
-		ConversationId:      m.GetConversationID(),
+		ConversationId:      messageConversationID(m),
 		SenderParticipantId: m.GetParticipantID(),
 		TimestampUs:         m.GetTimestamp(),
 		Kind:                kind(m.GetType(), st),
@@ -93,7 +93,7 @@ func MessagePage(resp *gmproto.ListMessagesResponse, reqCursor *gmproto.Cursor) 
 	if c := resp.GetCursor(); c != nil && c.GetLastItemID() != "" && advances(c, reqCursor) {
 		page.Next = cursor(c)
 	} else {
-		page.Next = &pb.Cursor{LastItemId: oldest.GetMessageID(), LastItemTsMs: oldest.GetTimestamp() / 1000}
+		page.Next = &pb.Cursor{LastItemId: messageID(oldest), LastItemTsMs: oldest.GetTimestamp() / 1000}
 	}
 	return page
 }

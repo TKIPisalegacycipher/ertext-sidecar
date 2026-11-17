@@ -25,7 +25,7 @@ func Participant(p *gmproto.Participant) *pb.Participant {
 
 func Conversation(c *gmproto.Conversation) *pb.Conversation {
 	out := &pb.Conversation{
-		Id:                c.GetConversationID(),
+		Id:                conversationID(c),
 		Name:              c.GetName(),
 		IsGroup:           c.GetIsGroupChat(),
 		Type:              convType(c.GetType()),
@@ -35,7 +35,7 @@ func Conversation(c *gmproto.Conversation) *pb.Conversation {
 		ReadOnly:          c.GetReadOnly(),
 		Pinned:            c.GetPinned(),
 		DefaultOutgoingId: c.GetDefaultOutgoingID(),
-		LatestMessageId:   c.GetLatestMessageID(),
+		LatestMessageId:   latestMessageID(c),
 		Snippet:           c.GetLatestMessage().GetDisplayContent(),
 		SnippetFromMe:     c.GetLatestMessage().GetFromMe() != 0,
 		SnippetSender:     c.GetLatestMessage().GetDisplayName(),
